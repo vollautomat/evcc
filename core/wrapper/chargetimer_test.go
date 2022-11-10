@@ -5,6 +5,7 @@ import (
 	"time"
 
 	"github.com/benbjohnson/clock"
+	"github.com/stretchr/testify/assert"
 )
 
 func TestTimer(t *testing.T) {
@@ -12,21 +13,21 @@ func TestTimer(t *testing.T) {
 	clck := clock.NewMock()
 	ct.clck = clck
 
-	ct.StartCharge(false)
+	ct.Reset()
 	clck.Add(time.Hour)
 	ct.StopCharge()
 	clck.Add(time.Hour)
 
-	if d, err := ct.ChargingTime(); d != 1*time.Hour || err != nil {
-		t.Error(d, err)
-	}
+	d, err := ct.ChargingTime()
+	assert.NoError(t, err)
+	assert.Equal(t, time.Hour, d)
 
 	// continue
-	ct.StartCharge(true)
+	ct.StartCharge()
 	clck.Add(2 * time.Hour)
 	ct.StopCharge()
 
-	if d, err := ct.ChargingTime(); d != 3*time.Hour || err != nil {
-		t.Error(d, err)
-	}
+	d, err = ct.ChargingTime()
+	assert.NoError(t, err)
+	assert.Equal(t, 3*time.Hour, d)
 }

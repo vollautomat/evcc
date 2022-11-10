@@ -344,8 +344,8 @@ func (lp *LoadPoint) configureChargerType(charger api.Charger) {
 	} else {
 		rt := wrapper.NewChargeRater(lp.log, lp.chargeMeter)
 		_ = lp.bus.Subscribe(evChargePower, rt.SetChargePower)
-		_ = lp.bus.Subscribe(evVehicleConnect, func() { rt.StartCharge(false) })
-		_ = lp.bus.Subscribe(evChargeStart, func() { rt.StartCharge(true) })
+		_ = lp.bus.Subscribe(evVehicleConnect, func() { rt.Reset() })
+		_ = lp.bus.Subscribe(evChargeStart, func() { rt.StartCharge() })
 		_ = lp.bus.Subscribe(evChargeStop, rt.StopCharge)
 		lp.chargeRater = rt
 	}
@@ -355,8 +355,8 @@ func (lp *LoadPoint) configureChargerType(charger api.Charger) {
 		lp.chargeTimer = ct
 	} else {
 		ct := wrapper.NewChargeTimer()
-		_ = lp.bus.Subscribe(evVehicleConnect, func() { ct.StartCharge(false) })
-		_ = lp.bus.Subscribe(evChargeStart, func() { ct.StartCharge(true) })
+		_ = lp.bus.Subscribe(evVehicleConnect, func() { ct.Reset() })
+		_ = lp.bus.Subscribe(evChargeStart, func() { ct.StartCharge() })
 		_ = lp.bus.Subscribe(evChargeStop, ct.StopCharge)
 		lp.chargeTimer = ct
 	}

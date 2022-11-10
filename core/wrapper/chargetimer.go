@@ -25,17 +25,23 @@ func NewChargeTimer() *ChargeTimer {
 	}
 }
 
+// Reset resets the charge timer
+func (m *ChargeTimer) Reset() {
+	m.Lock()
+	defer m.Unlock()
+
+	m.charging = false
+	m.duration = 0
+	m.start = m.clck.Now()
+}
+
 // StartCharge signals charge timer start
-func (m *ChargeTimer) StartCharge(continued bool) {
+func (m *ChargeTimer) StartCharge() {
 	m.Lock()
 	defer m.Unlock()
 
 	m.charging = true
 	m.start = m.clck.Now()
-
-	if !continued {
-		m.duration = 0
-	}
 }
 
 // StopCharge signals charge timer stop
@@ -55,5 +61,6 @@ func (m *ChargeTimer) ChargingTime() (time.Duration, error) {
 	if m.charging {
 		return m.duration + m.clck.Since(m.start), nil
 	}
+
 	return m.duration, nil
 }
