@@ -24,7 +24,7 @@ func Configure(other map[string]interface{}) error {
 		}
 
 		if _, ok := registry[conf.VM]; !ok {
-			vm := otto.New()
+			vm := otto.New(otto.WithLogger(&logger{util.NewLogger("js")}))
 
 			_, err := vm.Run(conf.Script)
 			if err != nil {
