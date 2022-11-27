@@ -68,38 +68,30 @@ func setConsole(vm *otto.Otto, name string) {
 	}
 
 	log := util.NewLogger(name)
-	undefined := otto.UndefinedValue()
 
-	console := map[string]interface{}{
-		"trace": func(call otto.FunctionCall) otto.Value {
-			print(log.TRACE, call.ArgumentList)
-			return undefined
-		},
-		"log": func(call otto.FunctionCall) otto.Value {
-			print(log.DEBUG, call.ArgumentList)
-			return undefined
-		},
-		"info": func(call otto.FunctionCall) otto.Value {
-			print(log.INFO, call.ArgumentList)
-			return undefined
-		},
-		"error": func(call otto.FunctionCall) otto.Value {
-			print(log.ERROR, call.ArgumentList)
-			return undefined
-		},
+	console := map[string]any{
+		"trace": printer(log.TRACE),
+		"log":   printer(log.DEBUG),
+		"info":  printer(log.INFO),
+		"error": printer(log.ERROR),
 	}
 
 	if err := vm.Set("console", console); err != nil {
 		panic(err)
 	}
+
+	// vm.Run(`console.log("Hello, World.");`)
+	// os.Exit(1)
 }
 
-func print(log *log.Logger, args []otto.Value) {
-	panic("print")
+func printer(log *log.Logger) func(call otto.FunctionCall) otto.Value {
+	return func(call otto.FunctionCall) otto.Value {
+		output := lo.Map(call.ArgumentList, func(a otto.Value, _ int) string {
+			return fmt.Sprintf("%v", a)
+		})
 
-	output := lo.Map(args, func(a otto.Value, _ int) string {
-		return fmt.Sprintf("%v", a)
-	})
+		log.Println(strings.Join(output, " "))
 
-	log.Println(strings.Join(output, " "))
+		return otto.UndefinedValue()
+	}
 }
