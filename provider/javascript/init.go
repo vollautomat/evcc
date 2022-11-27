@@ -1,9 +1,14 @@
 package javascript
 
 import (
+	"fmt"
+	"log"
+	"strings"
+
 	"github.com/evcc-io/evcc/util"
 	"github.com/robertkrimen/otto"
 	_ "github.com/robertkrimen/otto/underscore"
+	"github.com/samber/lo"
 )
 
 // Configure initializes JS VMs
@@ -47,6 +52,7 @@ func RegisteredVM(name string) *otto.Otto {
 	// create new VM
 	if !ok {
 		vm = otto.New()
+		setConsole(vm, name)
 
 		if name != "" {
 			registry[name] = vm
@@ -54,4 +60,46 @@ func RegisteredVM(name string) *otto.Otto {
 	}
 
 	return vm
+}
+
+func setConsole(vm *otto.Otto, name string) {
+	if name == "" {
+		name = "javascript"
+	}
+
+	log := util.NewLogger(name)
+	undefined := otto.UndefinedValue()
+
+	console := map[string]interface{}{
+		"trace": func(call otto.FunctionCall) otto.Value {
+			print(log.TRACE, call.ArgumentList)
+			return undefined
+		},
+		"log": func(call otto.FunctionCall) otto.Value {
+			print(log.DEBUG, call.ArgumentList)
+			return undefined
+		},
+		"info": func(call otto.FunctionCall) otto.Value {
+			print(log.INFO, call.ArgumentList)
+			return undefined
+		},
+		"error": func(call otto.FunctionCall) otto.Value {
+			print(log.ERROR, call.ArgumentList)
+			return undefined
+		},
+	}
+
+	if err := vm.Set("console", console); err != nil {
+		panic(err)
+	}
+}
+
+func print(log *log.Logger, args []otto.Value) {
+	panic("print")
+
+	output := lo.Map(args, func(a otto.Value, _ int) string {
+		return fmt.Sprintf("%v", a)
+	})
+
+	log.Println(strings.Join(output, " "))
 }
