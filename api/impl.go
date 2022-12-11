@@ -2,8 +2,10 @@ package api
 
 import (
 	"encoding"
+	"errors"
 	"fmt"
 	"strings"
+	"time"
 )
 
 // ChargeModeString converts string to ChargeMode
@@ -35,4 +37,15 @@ func (c *ChargeMode) UnmarshalText(text []byte) error {
 	*c = casted
 
 	return nil
+}
+
+// Current returns the rates current rate or error
+func (r Rates) Current(now time.Time) (Rate, error) {
+	for _, rr := range r {
+		if (rr.Start.Before(now) || rr.Start.Equal(now)) && rr.End.After(now) {
+			return rr, nil
+		}
+	}
+
+	return Rate{}, errors.New("rates unavailable")
 }

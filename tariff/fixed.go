@@ -1,6 +1,8 @@
 package tariff
 
 import (
+	"time"
+
 	"github.com/evcc-io/evcc/api"
 	"github.com/evcc-io/evcc/util"
 )
@@ -21,10 +23,13 @@ func NewFixed(other map[string]interface{}) (*Fixed, error) {
 	return &cc, nil
 }
 
-func (t *Fixed) CurrentPrice() (float64, error) {
-	return t.Price, nil
-}
+// Rates implements the api.Tariff interface
+func (t *Fixed) Rates() (api.Rates, error) {
+	rr := api.Rates{{
+		Start: time.Now(),
+		End:   time.Now().Add(time.Hour),
+		Price: t.Price,
+	}}
 
-func (t *Fixed) IsCheap() (bool, error) {
-	return false, nil
+	return rr, nil
 }

@@ -50,6 +50,8 @@ type API interface {
 
 	// SetTargetCharge sets the charge targetSoC
 	SetTargetCharge(time.Time, int) error
+	// Get charge target time
+	GetTargetTime() time.Time
 	// RemoteControl sets remote status demand
 	RemoteControl(string, RemoteDemand)
 
@@ -78,6 +80,8 @@ type API interface {
 	// charge progress
 	//
 
+	// AssumedChargeDuration estimates charge duration up to targetSoC based on virtual capacity
+	GetAssumedDuration() time.Duration
 	// GetRemainingDuration is the estimated remaining charging duration
 	GetRemainingDuration() time.Duration
 	// GetRemainingEnergy is the remaining charge energy in Wh

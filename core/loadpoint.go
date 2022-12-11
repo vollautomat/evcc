@@ -14,6 +14,7 @@ import (
 	"github.com/evcc-io/evcc/core/coordinator"
 	"github.com/evcc-io/evcc/core/db"
 	"github.com/evcc-io/evcc/core/loadpoint"
+	"github.com/evcc-io/evcc/core/planner"
 	"github.com/evcc-io/evcc/core/soc"
 	"github.com/evcc-io/evcc/core/wrapper"
 	"github.com/evcc-io/evcc/provider"
@@ -139,7 +140,7 @@ type LoadPoint struct {
 	defaultVehicle api.Vehicle // Default vehicle (disables detection)
 	coordinator    coordinator.API
 	socEstimator   *soc.Estimator
-	socTimer       *soc.Timer
+	timePlanner    *planner.Timer
 
 	// cached state
 	status         api.ChargeStatus       // Charger status
@@ -288,7 +289,7 @@ func NewLoadPoint(log *util.Logger) *LoadPoint {
 	}
 
 	// allow target charge handler to access loadpoint
-	lp.socTimer = soc.NewTimer(lp.log, &adapter{LoadPoint: lp})
+	lp.timePlanner = planner.NewTimer(lp.log, &adapter{LoadPoint: lp})
 
 	return lp
 }
@@ -479,7 +480,7 @@ func (lp *LoadPoint) evVehicleDisconnectHandler() {
 	lp.socUpdated = time.Time{}
 
 	// reset timer when vehicle is removed
-	lp.socTimer.Reset()
+	lp.timePlanner.Reset()
 }
 
 // evVehicleSoCProgressHandler sends external start event
@@ -764,7 +765,7 @@ func (lp *LoadPoint) disableUnlessClimater() error {
 		lp.log.DEBUG.Println("climater active")
 		current = lp.GetMinCurrent()
 	}
-	lp.socTimer.Reset() // once SoC is reached, the target charge request is removed
+	lp.timePlanner.Reset() // once SoC is reached, the target charge request is removed
 	return lp.setLimit(current, true)
 }
 
@@ -1684,7 +1685,7 @@ func (lp *LoadPoint) processTasks() {
 }
 
 // Update is the main control function. It reevaluates meters and charger state
-func (lp *LoadPoint) Update(sitePower float64, cheap, batteryBuffered bool) {
+func (lp *LoadPoint) Update(sitePower float64, batteryBuffered bool) {
 	lp.processTasks()
 
 	mode := lp.GetMode()
@@ -1735,7 +1736,7 @@ func (lp *LoadPoint) Update(sitePower float64, cheap, batteryBuffered bool) {
 	remoteDisabled := loadpoint.RemoteEnable
 
 	// reset detection if soc timer needs be deactivated after evaluating the loading strategy
-	lp.socTimer.MustValidateDemand()
+	lp.timePlanner.MustValidateDemand()
 
 	// execute loading strategy
 	switch {
@@ -1779,10 +1780,10 @@ func (lp *LoadPoint) Update(sitePower float64, cheap, batteryBuffered bool) {
 		}
 
 	// target charging
-	case lp.socTimer.DemandActive():
+	case lp.timePlanner.DemandActive():
 		// 3p if available
 		if err = lp.scalePhasesIfAvailable(3); err == nil {
-			targetCurrent := lp.socTimer.Handle()
+			targetCurrent := lp.timePlanner.Handle()
 			err = lp.setLimit(targetCurrent, true)
 		}
 
@@ -1796,12 +1797,13 @@ func (lp *LoadPoint) Update(sitePower float64, cheap, batteryBuffered bool) {
 			required = true
 		}
 
+		// TODO remove
 		// tariff
-		if cheap {
-			targetCurrent = lp.GetMaxCurrent()
-			lp.log.DEBUG.Printf("cheap tariff: %.3gA", targetCurrent)
-			required = true
-		}
+		// if cheap {
+		// 	targetCurrent = lp.GetMaxCurrent()
+		// 	lp.log.DEBUG.Printf("cheap tariff: %.3gA", targetCurrent)
+		// 	required = true
+		// }
 
 		// Sunny Home Manager
 		if lp.remoteControlled(loadpoint.RemoteSoftDisable) {
@@ -1820,8 +1822,8 @@ func (lp *LoadPoint) Update(sitePower float64, cheap, batteryBuffered bool) {
 	}
 
 	// stop an active target charging session if not currently evaluated
-	if !lp.socTimer.DemandValidated() {
-		lp.socTimer.Stop()
+	if !lp.timePlanner.DemandValidated() {
+		lp.timePlanner.Stop()
 	}
 
 	// effective disabled status

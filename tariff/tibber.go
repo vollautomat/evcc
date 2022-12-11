@@ -2,7 +2,6 @@ package tariff
 
 import (
 	"context"
-	"errors"
 	"sync"
 	"time"
 
@@ -14,7 +13,7 @@ import (
 )
 
 type Tibber struct {
-	mux    sync.Mutex
+	mu     sync.Mutex
 	log    *util.Logger
 	homeID string
 	cheap  float64
@@ -85,27 +84,26 @@ func (t *Tibber) Run() {
 			continue
 		}
 
-		t.mux.Lock()
+		t.mu.Lock()
 		t.data = res.Viewer.Home.CurrentSubscription.PriceInfo.Today
-		t.mux.Unlock()
+		t.mu.Unlock()
 	}
 }
 
-func (t *Tibber) CurrentPrice() (float64, error) {
-	t.mux.Lock()
-	defer t.mux.Unlock()
+// Rates implements the api.Tariff interface
+func (t *Tibber) Rates() (api.Rates, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 
-	for i := len(t.data) - 1; i >= 0; i-- {
-		pi := t.data[i]
-
-		if pi.StartsAt.Before(time.Now()) {
-			return pi.Total, nil
+	res := make(api.Rates, 0, len(t.data))
+	for _, r := range t.data {
+		ar := api.Rate{
+			Start: r.StartsAt,
+			End:   r.StartsAt.Add(time.Hour),
+			Price: r.Total,
 		}
+		res = append(res, ar)
 	}
-	return 0, errors.New("unable to find current tibber price")
-}
 
-func (t *Tibber) IsCheap() (bool, error) {
-	price, err := t.CurrentPrice()
-	return price <= t.cheap, err
+	return res, nil
 }

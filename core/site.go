@@ -13,6 +13,7 @@ import (
 	"github.com/evcc-io/evcc/core/coordinator"
 	"github.com/evcc-io/evcc/core/db"
 	"github.com/evcc-io/evcc/core/loadpoint"
+	"github.com/evcc-io/evcc/core/planner"
 	"github.com/evcc-io/evcc/push"
 	serverdb "github.com/evcc-io/evcc/server/db"
 	"github.com/evcc-io/evcc/tariff"
@@ -24,7 +25,7 @@ const standbyPower = 10 // consider less than 10W as charger in standby
 
 // Updater abstracts the LoadPoint implementation for testing
 type Updater interface {
-	Update(availablePower float64, cheapRate, batteryBuffered bool)
+	Update(availablePower float64, batteryBuffered bool)
 }
 
 // Site is the main configuration container. A site can host multiple loadpoints.
@@ -52,8 +53,9 @@ type Site struct {
 	batteryMeters []api.Meter // Battery charging meters
 
 	tariffs     tariff.Tariffs           // Tariff
+	planner     *planner.Pricer          // Planner
 	loadpoints  []*LoadPoint             // Loadpoints
-	coordinator *coordinator.Coordinator // Savings
+	coordinator *coordinator.Coordinator // Vehicles
 	savings     *Savings                 // Savings
 
 	// cached state
@@ -129,6 +131,12 @@ func NewSiteFromConfig(
 		}
 	}
 
+	// planner
+	if gridTariff := site.tariffs.Grid; gridTariff != nil {
+		site.planner = planner.NewPricer(log, gridTariff)
+	}
+
+	// grid meter
 	if site.Meters.GridMeterRef != "" {
 		var err error
 		if site.gridMeter, err = cp.Meter(site.Meters.GridMeterRef); err != nil {
@@ -473,15 +481,6 @@ func (site *Site) sitePower(totalChargePower float64) (float64, error) {
 func (site *Site) update(lp Updater) {
 	site.log.DEBUG.Println("----")
 
-	var cheap bool
-	var err error
-	if site.tariffs.Grid != nil {
-		cheap, err = site.tariffs.Grid.IsCheap()
-		if err != nil {
-			cheap = false
-		}
-	}
-
 	// update all loadpoint's charge power
 	var totalChargePower float64
 	for _, lp := range site.loadpoints {
@@ -490,7 +489,7 @@ func (site *Site) update(lp Updater) {
 	}
 
 	if sitePower, err := site.sitePower(totalChargePower); err == nil {
-		lp.Update(sitePower, cheap, site.batteryBuffered)
+		lp.Update(sitePower, site.batteryBuffered)
 
 		// ignore negative pvPower values as that means it is not an energy source but consumption
 		homePower := site.gridPower + math.Max(0, site.pvPower) + site.batteryPower - totalChargePower

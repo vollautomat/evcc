@@ -213,10 +213,20 @@ type Resurrector interface {
 	WakeUp() error
 }
 
+// Rate is a grid tariff rate
+type Rate struct {
+	Start, End time.Time
+	Price      float64
+}
+
+// Rates is a slice of (future) rates
+type Rates []Rate
+
 // Tariff is the grid tariff
 type Tariff interface {
-	IsCheap() (bool, error)
-	CurrentPrice() (float64, error) // EUR/kWh, CHF/kWh, ...
+	// TODO remove
+	// IsCheap() (bool, error)
+	Rates() (Rates, error)
 }
 
 // AuthProvider is the ability to provide OAuth authentication through the ui

@@ -1,10 +1,11 @@
-package soc
+package planner
 
 import (
 	"math"
 	"time"
 
 	"github.com/evcc-io/evcc/api"
+	"github.com/evcc-io/evcc/core/soc"
 	"github.com/evcc-io/evcc/util"
 )
 
@@ -24,7 +25,7 @@ type Timer struct {
 	validated bool
 }
 
-// NewTimer creates a Timer
+// NewTimer creates a time planner
 func NewTimer(log *util.Logger, api Adapter) *Timer {
 	lp := &Timer{
 		log:     log,
@@ -52,6 +53,20 @@ func (lp *Timer) DemandValidated() bool {
 	return lp.validated
 }
 
+func (lp *Timer) RemainingDuration() time.Duration {
+	se := lp.SocEstimator()
+	if se == nil {
+		return 0
+	}
+
+	power := lp.GetMaxPower()
+	if lp.active {
+		power *= lp.current / lp.GetMaxCurrent()
+	}
+
+	return se.RemainingChargeDuration(power, lp.SoC)
+}
+
 // Stop stops the target charging request
 func (lp *Timer) Stop() {
 	if lp == nil {
@@ -72,13 +87,7 @@ func (lp *Timer) Set(t time.Time) {
 	}
 
 	lp.Time = t
-
-	if lp.Time.IsZero() {
-		lp.Publish("targetTime", nil)
-		lp.Publish("targetTimeProjectedStart", nil)
-	} else {
-		lp.Publish("targetTime", lp.Time)
-	}
+	lp.Publish("targetTime", lp.Time)
 }
 
 // Reset resets the target charging request
@@ -113,18 +122,15 @@ func (lp *Timer) DemandActive() bool {
 	}
 
 	// time
-	remainingDuration := time.Duration(float64(se.AssumedChargeDuration(lp.SoC, power)) / chargeEfficiency)
+	remainingDuration := time.Duration(float64(se.AssumedChargeDuration(lp.SoC, power)) / soc.ChargeEfficiency)
 	lp.finishAt = time.Now().Add(remainingDuration).Round(time.Minute)
 
 	lp.log.DEBUG.Printf("estimated charge duration: %v to %d%% at %.0fW", remainingDuration.Round(time.Minute), lp.SoC, power)
 	if lp.active {
 		lp.log.DEBUG.Printf("projected end: %v", lp.finishAt)
 		lp.log.DEBUG.Printf("desired finish time: %v", lp.Time)
-		lp.Publish("targetTimeProjectedStart", nil)
 	} else {
-		projectedStart := lp.Time.Add(-remainingDuration)
-		lp.log.DEBUG.Printf("projected start: %v", projectedStart)
-		lp.Publish("targetTimeProjectedStart", projectedStart)
+		lp.log.DEBUG.Printf("projected start: %v", lp.Time.Add(-remainingDuration))
 	}
 
 	// timer charging is already active- only deactivate once charging has stopped
@@ -142,7 +148,7 @@ func (lp *Timer) DemandActive() bool {
 		lp.Publish("targetTimeActive", lp.active)
 
 		lp.current = lp.GetMaxCurrent()
-		lp.log.INFO.Printf("target charging active for %v: projected %v (%v remaining)", lp.Time.Local(), lp.finishAt.Local(), remainingDuration.Round(time.Minute))
+		lp.log.INFO.Printf("target charging active for %v: projected %v (%v remaining)", lp.Time, lp.finishAt, remainingDuration.Round(time.Minute))
 	}
 
 	return lp.active

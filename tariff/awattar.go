@@ -1,7 +1,6 @@
 package tariff
 
 import (
-	"errors"
 	"fmt"
 	"strings"
 	"sync"
@@ -14,11 +13,10 @@ import (
 )
 
 type Awattar struct {
-	mux   sync.Mutex
-	log   *util.Logger
-	uri   string
-	cheap float64
-	data  []awattar.PriceInfo
+	mu   sync.Mutex
+	log  *util.Logger
+	uri  string
+	data []awattar.PriceInfo
 }
 
 var _ api.Tariff = (*Awattar)(nil)
@@ -36,9 +34,8 @@ func NewAwattar(other map[string]interface{}) (*Awattar, error) {
 	}
 
 	t := &Awattar{
-		log:   util.NewLogger("awattar"),
-		cheap: cc.Cheap,
-		uri:   fmt.Sprintf(awattar.RegionURI, strings.ToLower(cc.Region)),
+		log: util.NewLogger("awattar"),
+		uri: fmt.Sprintf(awattar.RegionURI, strings.ToLower(cc.Region)),
 	}
 
 	go t.Run()
@@ -56,28 +53,26 @@ func (t *Awattar) Run() {
 			continue
 		}
 
-		t.mux.Lock()
+		t.mu.Lock()
 		t.data = res.Data
-		t.mux.Unlock()
+		t.mu.Unlock()
 	}
 }
 
-func (t *Awattar) CurrentPrice() (float64, error) {
-	t.mux.Lock()
-	defer t.mux.Unlock()
+// Rates implements the api.Tariff interface
+func (t *Awattar) Rates() (api.Rates, error) {
+	t.mu.Lock()
+	defer t.mu.Unlock()
 
-	for i := len(t.data) - 1; i >= 0; i-- {
-		pi := t.data[i]
-
-		if pi.StartTimestamp.Before(time.Now()) && pi.EndTimestamp.After(time.Now()) {
-			return pi.Marketprice / 1000, nil // convert EUR/MWh to EUR/KWh
+	res := make(api.Rates, 0, len(t.data))
+	for _, r := range t.data {
+		ar := api.Rate{
+			Start: r.StartTimestamp,
+			End:   r.EndTimestamp,
+			Price: r.Marketprice / 1e3,
 		}
+		res = append(res, ar)
 	}
 
-	return 0, errors.New("unable to find current awattar price")
-}
-
-func (t *Awattar) IsCheap() (bool, error) {
-	price, err := t.CurrentPrice()
-	return price <= t.cheap, err
+	return res, nil
 }
