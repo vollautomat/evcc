@@ -16,7 +16,6 @@ type Tibber struct {
 	mu     sync.Mutex
 	log    *util.Logger
 	homeID string
-	cheap  float64
 	client *tibber.Client
 	data   []tibber.PriceInfo
 }
@@ -27,7 +26,7 @@ func NewTibber(other map[string]interface{}) (*Tibber, error) {
 	var cc struct {
 		Token  string
 		HomeID string
-		Cheap  float64
+		Cheap  any // TODO deprecated
 	}
 
 	if err := util.DecodeOther(other, &cc); err != nil {
@@ -43,7 +42,6 @@ func NewTibber(other map[string]interface{}) (*Tibber, error) {
 	t := &Tibber{
 		log:    log,
 		homeID: cc.HomeID,
-		cheap:  cc.Cheap,
 		client: tibber.NewClient(log, cc.Token),
 	}
 
@@ -52,6 +50,11 @@ func NewTibber(other map[string]interface{}) (*Tibber, error) {
 		if t.homeID, err = t.client.DefaultHomeID(); err != nil {
 			return nil, err
 		}
+	}
+
+	// TODO deprecated
+	if cc.Cheap != nil {
+		t.log.WARN.Println("cheap rate configuration has been replaced by target charging and is deprecated")
 	}
 
 	go t.Run()

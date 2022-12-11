@@ -23,7 +23,7 @@ var _ api.Tariff = (*Awattar)(nil)
 
 func NewAwattar(other map[string]interface{}) (*Awattar, error) {
 	cc := struct {
-		Cheap  float64
+		Cheap  any // TODO deprecated
 		Region string
 	}{
 		Region: "DE",
@@ -36,6 +36,11 @@ func NewAwattar(other map[string]interface{}) (*Awattar, error) {
 	t := &Awattar{
 		log: util.NewLogger("awattar"),
 		uri: fmt.Sprintf(awattar.RegionURI, strings.ToLower(cc.Region)),
+	}
+
+	// TODO deprecated
+	if cc.Cheap != nil {
+		t.log.WARN.Println("cheap rate configuration has been replaced by target charging and is deprecated")
 	}
 
 	go t.Run()
