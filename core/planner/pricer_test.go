@@ -15,10 +15,10 @@ type MockTariff struct {
 	prices []float64
 }
 
-func (m MockTariff) Rates() ([]api.Rate, error) {
+func (m MockTariff) Rates() (api.Rates, error) {
 	start := m.start
 
-	var res []api.Rate
+	res := make(api.Rates, 0, len(m.prices))
 	for _, v := range m.prices {
 		ar := api.Rate{
 			Start: start,
