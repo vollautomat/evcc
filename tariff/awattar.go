@@ -13,7 +13,7 @@ import (
 )
 
 type Awattar struct {
-	mu   sync.Mutex
+	mux  sync.Mutex
 	log  *util.Logger
 	uri  string
 	data []awattar.PriceInfo
@@ -58,16 +58,16 @@ func (t *Awattar) Run() {
 			continue
 		}
 
-		t.mu.Lock()
+		t.mux.Lock()
 		t.data = res.Data
-		t.mu.Unlock()
+		t.mux.Unlock()
 	}
 }
 
 // Rates implements the api.Tariff interface
 func (t *Awattar) Rates() (api.Rates, error) {
-	t.mu.Lock()
-	defer t.mu.Unlock()
+	t.mux.Lock()
+	defer t.mux.Unlock()
 
 	res := make(api.Rates, 0, len(t.data))
 	for _, r := range t.data {
