@@ -219,10 +219,10 @@ type Rate struct {
 	Price      float64
 }
 
-// Rates is a slice of (future) rates
+// Rates is a slice of (future) tariff rates
 type Rates []Rate
 
-// Tariff is the grid tariff
+// Tariff is a tariff capable of retrieving tariff rates
 type Tariff interface {
 	Rates() (Rates, error)
 }
