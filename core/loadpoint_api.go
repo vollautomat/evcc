@@ -202,6 +202,12 @@ func (lp *LoadPoint) SetTargetCharge(finishAt time.Time, soc int) error {
 	return nil
 }
 
+// setTargetTime sets the charge target time
+func (lp *LoadPoint) setTargetTime(finishAt time.Time) {
+	lp.targetTime = finishAt
+	lp.publish(targetTime, finishAt)
+}
+
 // RemoteControl sets remote status demand
 func (lp *LoadPoint) RemoteControl(source string, demand loadpoint.RemoteDemand) {
 	lp.Lock()
@@ -341,15 +347,4 @@ func (lp *LoadPoint) StartVehicleDetection() {
 
 	// start auto-detect
 	lp.startVehicleDetection()
-}
-
-// GetTargetTime returns the charge target time
-func (lp *LoadPoint) GetTargetTime() time.Time {
-	return lp.targetTime
-}
-
-// setTargetTime sets the charge target time
-func (lp *LoadPoint) setTargetTime(finishAt time.Time) {
-	lp.targetTime = finishAt
-	lp.publish(targetTime, finishAt)
 }
