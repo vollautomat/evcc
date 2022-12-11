@@ -2,7 +2,6 @@ package api
 
 import (
 	"encoding"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -47,5 +46,21 @@ func (r Rates) Current(now time.Time) (Rate, error) {
 		}
 	}
 
-	return Rate{}, errors.New("rates unavailable")
+	return Rate{}, ErrRatesUnavailable
+}
+
+// implement sort.Interface
+func (r Rates) Len() int {
+	return len(r)
+}
+
+func (r Rates) Less(i, j int) bool {
+	if r[i].Price == r[j].Price {
+		return r[i].Start.After(r[j].Start)
+	}
+	return r[i].Price < r[j].Price
+}
+
+func (r Rates) Swap(i, j int) {
+	r[i], r[j] = r[j], r[i]
 }

@@ -14,6 +14,9 @@ var ErrSponsorRequired = errors.New("sponsorship required, see https://github.co
 // ErrMissingCredentials indicates that user/password are missing
 var ErrMissingCredentials = errors.New("missing credentials")
 
+// ErrRatesUnavailable indicates that tariff rates are unavailable
+var ErrRatesUnavailable = errors.New("rates unavailable")
+
 // ErrTimeout is the error returned when a timeout happened.
 // Modeled after context.DeadlineError
 var ErrTimeout error = errTimeoutError{}

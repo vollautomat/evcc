@@ -9,5 +9,9 @@ const (
 
 	vehicleRange     = "vehicleRange"     // vehicle range
 	vehicleOdometer  = "vehicleOdometer"  // vehicle odometer
+	vehicleSoC       = "vehicleSoC"       // vehicle soc
 	vehicleTargetSoC = "vehicleTargetSoC" // vehicle soc limit
+
+	targetTime       = "targetTime"       // target charging finish time goal
+	targetTimeActive = "targetTimeActive" // target charging plan has determined current slot to be an active slot
 )

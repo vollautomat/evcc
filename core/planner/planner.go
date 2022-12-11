@@ -12,41 +12,24 @@ import (
 
 const hysteresisDuration = 5 * time.Minute
 
-// RatesByPrice implements sort.Interface based on price
-type RatesByPrice []api.Rate
-
-func (a RatesByPrice) Len() int {
-	return len(a)
-}
-
-func (a RatesByPrice) Less(i, j int) bool {
-	if a[i].Price == a[j].Price {
-		return a[i].Start.After(a[j].Start)
-	}
-	return a[i].Price < a[j].Price
-}
-
-func (a RatesByPrice) Swap(i, j int) {
-	a[i], a[j] = a[j], a[i]
-}
-
-type Pricer struct {
+// Planner plans a series of charging slots for a given (variable) tariff
+type Planner struct {
 	log    *util.Logger
 	clock  clock.Clock // mockable time
 	tariff api.Tariff
 }
 
-// NewPricer creates a price planner
-func NewPricer(log *util.Logger, tariff api.Tariff) *Pricer {
-	clock := clock.New()
-	return &Pricer{
+// New creates a price planner
+func New(log *util.Logger, tariff api.Tariff) *Planner {
+	return &Planner{
 		log:    log,
-		clock:  clock,
+		clock:  clock.New(),
 		tariff: tariff,
 	}
 }
 
-func (t *Pricer) PlanActive(requiredDuration time.Duration, targetTime time.Time) (bool, error) {
+// Active determines if current slot should be used for charging for a total required duration until target time
+func (t *Planner) Active(requiredDuration time.Duration, targetTime time.Time) (bool, error) {
 	if t == nil {
 		return false, nil
 	}
@@ -55,16 +38,21 @@ func (t *Pricer) PlanActive(requiredDuration time.Duration, targetTime time.Time
 		return false, nil
 	}
 
-	data, err := t.tariff.Rates()
+	rates, err := t.tariff.Rates()
 	if err != nil {
 		return false, err
 	}
 
-	// rates are by default sorted by date, oldest to newest
-	last := data[len(data)-1].End
+	// can't plan if we don't have rates
+	if len(rates) == 0 {
+		return false, api.ErrRatesUnavailable
+	}
 
-	// sort rates by price
-	sort.Sort(RatesByPrice(data))
+	// rates are by default sorted by date, oldest to newest
+	last := rates[len(rates)-1].End
+
+	// sort rates by price and time
+	sort.Sort(rates)
 
 	requiredDuration = time.Duration(float64(requiredDuration) / soc.ChargeEfficiency)
 
@@ -72,7 +60,7 @@ func (t *Pricer) PlanActive(requiredDuration time.Duration, targetTime time.Time
 	if targetTime.After(last) {
 		duration_old := requiredDuration
 		requiredDuration = time.Duration(float64(requiredDuration) * float64(time.Until(last)) / float64(time.Until(targetTime)))
-		t.log.DEBUG.Printf("reduced duration from %s to %s until got new priceinfo after %s\n", duration_old.Round(time.Minute), requiredDuration.Round(time.Minute), last.Round(time.Minute))
+		t.log.DEBUG.Printf("reduced duration from %s to %s until got new price info after %s\n", duration_old.Round(time.Minute), requiredDuration.Round(time.Minute), last.Round(time.Minute))
 	}
 
 	t.log.DEBUG.Printf("charge duration: %s, end: %v, find best prices:\n", requiredDuration.Round(time.Minute), targetTime.Round(time.Minute))
@@ -81,7 +69,7 @@ func (t *Pricer) PlanActive(requiredDuration time.Duration, targetTime time.Time
 	var plannedSlots, currentSlot int
 	var plannedDuration time.Duration
 
-	for _, slot := range data {
+	for _, slot := range rates {
 		// slot not relevant
 		if slot.Start.After(targetTime) || slot.End.Before(t.clock.Now()) {
 			continue
@@ -100,9 +88,9 @@ func (t *Pricer) PlanActive(requiredDuration time.Duration, targetTime time.Time
 		plannedSlots++
 		plannedDuration += slot.End.Sub(slot.Start)
 
-		t.log.TRACE.Printf("  Slot from: %v to %v price %f, timesum %s",
+		t.log.TRACE.Printf("  slot from: %v to %v price %f, time sum %s",
 			slot.Start.Round(time.Second), slot.End.Round(time.Second),
-			slot.Price, plannedDuration)
+			slot.Price, plannedDuration.Round(time.Second))
 
 		// plan covers current slot
 		if slot.Start.Before(t.clock.Now().Add(1)) && slot.End.After(t.clock.Now()) {
@@ -119,7 +107,7 @@ func (t *Pricer) PlanActive(requiredDuration time.Duration, targetTime time.Time
 
 	// delay start of most expensive slot as long as possible
 	if currentSlot == plannedSlots && plannedSlots > 1 && plannedDuration > requiredDuration+hysteresisDuration {
-		t.log.DEBUG.Printf("cheap timeslot, delayed for %s\n", (plannedDuration - requiredDuration).Round(time.Minute))
+		t.log.DEBUG.Printf("cheap times lot, delayed for %s\n", (plannedDuration - requiredDuration).Round(time.Minute))
 		cheapActive = false
 	}
 

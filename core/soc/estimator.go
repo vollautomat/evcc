@@ -53,43 +53,10 @@ func (s *Estimator) Reset() {
 	s.energyPerSocStep = s.virtualCapacity / 100
 }
 
-// AssumedChargeDuration estimates charge duration up to targetSoC based on virtual capacity
-func (s *Estimator) AssumedChargeDuration(targetSoC int, chargePower float64) time.Duration {
-	percentRemaining := float64(targetSoC) - s.vehicleSoc
-
-	if percentRemaining <= 0 || s.virtualCapacity <= 0 {
-		return 0
-	}
-
-	whRemaining := percentRemaining / 100 * s.virtualCapacity
+// RemainingChargeDuration returns the estimated remaining duration
+func (s *Estimator) RemainingChargeDuration(targetSoC int, chargePower float64) time.Duration {
+	whRemaining := s.RemainingChargeEnergy(targetSoC) * 1e3
 	return time.Duration(float64(time.Hour) * whRemaining / chargePower).Round(time.Second)
-}
-
-// RemainingChargeDuration returns the remaining duration estimate based on SoC, target and charge power
-func (s *Estimator) RemainingChargeDuration(chargePower float64, targetSoC int) time.Duration {
-	if chargePower > 0 {
-		percentRemaining := float64(targetSoC) - s.vehicleSoc
-		if percentRemaining <= 0 {
-			return 0
-		}
-
-		// use vehicle api if available
-		if vr, ok := s.vehicle.(api.VehicleFinishTimer); ok {
-			finishTime, err := vr.FinishTime()
-			if err == nil {
-				timeRemaining := time.Until(finishTime)
-				return time.Duration(float64(timeRemaining) * percentRemaining / (100 - s.vehicleSoc))
-			}
-
-			if !errors.Is(err, api.ErrNotAvailable) {
-				s.log.WARN.Printf("updating remaining time failed: %v", err)
-			}
-		}
-
-		return s.AssumedChargeDuration(targetSoC, chargePower)
-	}
-
-	return -1
 }
 
 // RemainingChargeEnergy returns the remaining charge energy in kWh

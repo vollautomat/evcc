@@ -74,10 +74,6 @@ func (lp *LoadPoint) GetTargetEnergy() float64 {
 // setTargetEnergy sets loadpoint charge target energy (no mutex)
 func (lp *LoadPoint) setTargetEnergy(energy float64) {
 	lp.targetEnergy = energy
-	// TODO timePlanner
-	// if lp.timePlanner != nil {
-	// lp.timePlanner.Energy = energy
-	// }
 	lp.publish("targetEnergy", energy)
 }
 
@@ -105,10 +101,6 @@ func (lp *LoadPoint) GetTargetSoC() int {
 // setTargetSoC sets loadpoint charge target soc (no mutex)
 func (lp *LoadPoint) setTargetSoC(soc int) {
 	lp.SoC.target = soc
-	// test guard
-	if lp.timePlanner != nil {
-		lp.timePlanner.SoC = soc
-	}
 	lp.publish("targetSoC", soc)
 }
 
@@ -197,8 +189,8 @@ func (lp *LoadPoint) SetTargetCharge(finishAt time.Time, soc int) error {
 	lp.log.DEBUG.Printf("set target charge: %d @ %v", soc, finishAt)
 
 	// apply immediately
-	if lp.timePlanner.Time != finishAt || lp.SoC.target != soc {
-		lp.timePlanner.Set(finishAt)
+	if !lp.targetTime.Equal(finishAt) || lp.SoC.target != soc {
+		lp.setTargetTime(finishAt)
 
 		// don't remove soc
 		if !finishAt.IsZero() {
@@ -353,10 +345,11 @@ func (lp *LoadPoint) StartVehicleDetection() {
 
 // GetTargetTime returns the charge target time
 func (lp *LoadPoint) GetTargetTime() time.Time {
-	return lp.timePlanner.Time
+	return lp.targetTime
 }
 
-// GetAssumedDuration is the estimated remaining charging duration
-func (lp *LoadPoint) GetAssumedDuration() time.Duration {
-	return lp.socEstimator.AssumedChargeDuration(lp.SoC.target, lp.GetMaxPower())
+// setTargetTime sets the charge target time
+func (lp *LoadPoint) setTargetTime(finishAt time.Time) {
+	lp.targetTime = finishAt
+	lp.publish(targetTime, finishAt)
 }

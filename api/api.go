@@ -224,8 +224,6 @@ type Rates []Rate
 
 // Tariff is the grid tariff
 type Tariff interface {
-	// TODO remove
-	// IsCheap() (bool, error)
 	Rates() (Rates, error)
 }
 

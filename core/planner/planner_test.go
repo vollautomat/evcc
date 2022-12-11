@@ -98,7 +98,7 @@ func TestIsCheapSlotNow(t *testing.T) {
 		t.Logf("%+v", tc.desc)
 		clck.Set(start)
 
-		p := &Pricer{
+		p := &Planner{
 			log:    util.NewLogger("foo"),
 			clock:  clck,
 			tariff: MockTariff{prices: tc.prices, start: start},
@@ -107,7 +107,7 @@ func TestIsCheapSlotNow(t *testing.T) {
 		for _, se := range tc.series {
 			clck.Set(start.Add(se.delay))
 
-			if res, _ := p.PlanActive(se.cDuration, start.Add(tc.end)); se.res != res {
+			if res, _ := p.Active(se.cDuration, start.Add(tc.end)); se.res != res {
 				t.Errorf("%s case %v: expected %v, got %v", tc.desc, se.caseNr, se.res, res)
 			}
 		}
@@ -143,7 +143,7 @@ func TestIsCheap(t *testing.T) {
 		t.Logf("%+v", tc.desc)
 		clck.Set(start)
 
-		p := &Pricer{
+		p := &Planner{
 			log:    util.NewLogger("foo"),
 			clock:  clck,
 			tariff: MockTariff{prices: tc.prices, start: start},
@@ -152,7 +152,7 @@ func TestIsCheap(t *testing.T) {
 		for _, se := range tc.series {
 			clck.Set(start.Add(se.delay))
 
-			if res, _ := p.PlanActive(se.cDuration, start.Add(tc.end)); se.res != res {
+			if res, _ := p.Active(se.cDuration, start.Add(tc.end)); se.res != res {
 				t.Errorf("%s case %v: expected %v, got %v", tc.desc, se.caseNr, se.res, res)
 			}
 		}

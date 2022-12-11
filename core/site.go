@@ -53,7 +53,6 @@ type Site struct {
 	batteryMeters []api.Meter // Battery charging meters
 
 	tariffs     tariff.Tariffs           // Tariff
-	planner     *planner.Pricer          // Planner
 	loadpoints  []*LoadPoint             // Loadpoints
 	coordinator *coordinator.Coordinator // Vehicles
 	savings     *Savings                 // Savings
@@ -120,6 +119,11 @@ func NewSiteFromConfig(
 	for _, lp := range loadpoints {
 		lp.coordinator = coordinator.NewAdapter(lp, site.coordinator)
 
+		// planner
+		if gridTariff := site.tariffs.Grid; gridTariff != nil {
+			lp.planner = planner.New(lp.log, gridTariff)
+		}
+
 		if serverdb.Instance != nil {
 			var err error
 			if lp.db, err = db.New(lp.Title); err != nil {
@@ -129,11 +133,6 @@ func NewSiteFromConfig(
 			// NOTE: this requires stopSession to respect async access
 			shutdown.Register(lp.stopSession)
 		}
-	}
-
-	// planner
-	if gridTariff := site.tariffs.Grid; gridTariff != nil {
-		site.planner = planner.NewPricer(log, gridTariff)
 	}
 
 	// grid meter
