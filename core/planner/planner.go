@@ -1,6 +1,7 @@
 package planner
 
 import (
+	"fmt"
 	"sort"
 	"time"
 
@@ -45,7 +46,7 @@ func (t *Planner) Active(requiredDuration time.Duration, targetTime time.Time) (
 
 	// can't plan if we don't have rates
 	if len(rates) == 0 {
-		return false, api.ErrRatesUnavailable
+		return false, fmt.Errorf("rates: %w", api.ErrNotAvailable)
 	}
 
 	// rates are by default sorted by date, oldest to newest

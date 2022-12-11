@@ -2,6 +2,7 @@ package api
 
 import (
 	"encoding"
+	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -46,7 +47,7 @@ func (r Rates) Current(now time.Time) (Rate, error) {
 		}
 	}
 
-	return Rate{}, ErrRatesUnavailable
+	return Rate{}, errors.New("no matching rate")
 }
 
 // implement sort.Interface
