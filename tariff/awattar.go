@@ -16,7 +16,7 @@ type Awattar struct {
 	mux  sync.Mutex
 	log  *util.Logger
 	uri  string
-	data []awattar.PriceInfo
+	data api.Rates
 }
 
 var _ api.Tariff = (*Awattar)(nil)
@@ -59,7 +59,17 @@ func (t *Awattar) Run() {
 		}
 
 		t.mux.Lock()
-		t.data = res.Data
+		t.data = make(api.Rates, 0, len(res.Data))
+
+		for _, r := range res.Data {
+			ar := api.Rate{
+				Start: r.StartTimestamp,
+				End:   r.EndTimestamp,
+				Price: r.Marketprice / 1e3,
+			}
+			t.data = append(t.data, ar)
+		}
+
 		t.mux.Unlock()
 	}
 }
@@ -68,16 +78,5 @@ func (t *Awattar) Run() {
 func (t *Awattar) Rates() (api.Rates, error) {
 	t.mux.Lock()
 	defer t.mux.Unlock()
-
-	res := make(api.Rates, 0, len(t.data))
-	for _, r := range t.data {
-		ar := api.Rate{
-			Start: r.StartTimestamp,
-			End:   r.EndTimestamp,
-			Price: r.Marketprice / 1e3,
-		}
-		res = append(res, ar)
-	}
-
-	return res, nil
+	return t.data, nil
 }

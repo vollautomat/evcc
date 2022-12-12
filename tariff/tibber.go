@@ -18,7 +18,7 @@ type Tibber struct {
 	log    *util.Logger
 	homeID string
 	client *tibber.Client
-	data   []tibber.PriceInfo
+	data   api.Rates
 }
 
 var _ api.Tariff = (*Tibber)(nil)
@@ -89,25 +89,31 @@ func (t *Tibber) Run() {
 		}
 
 		t.mux.Lock()
-		t.data = res.Viewer.Home.CurrentSubscription.PriceInfo.Today
+
+		pi := res.Viewer.Home.CurrentSubscription.PriceInfo
+		t.data = make(api.Rates, 0, len(pi.Today)+len(pi.Tomorrow))
+		t.data = append(t.rates(pi.Today), t.rates(pi.Tomorrow)...)
+
 		t.mux.Unlock()
 	}
+}
+
+func (t *Tibber) rates(pi []tibber.PriceInfo) api.Rates {
+	data := make(api.Rates, 0, len(pi))
+	for _, r := range pi {
+		ar := api.Rate{
+			Start: r.StartsAt,
+			End:   r.StartsAt.Add(time.Hour),
+			Price: r.Total,
+		}
+		data = append(data, ar)
+	}
+	return data
 }
 
 // Rates implements the api.Tariff interface
 func (t *Tibber) Rates() (api.Rates, error) {
 	t.mux.Lock()
 	defer t.mux.Unlock()
-
-	res := make(api.Rates, 0, len(t.data))
-	for _, r := range t.data {
-		ar := api.Rate{
-			Start: r.StartsAt,
-			End:   r.StartsAt.Add(time.Hour),
-			Price: r.Total,
-		}
-		res = append(res, ar)
-	}
-
-	return res, nil
+	return t.data, nil
 }
