@@ -1672,9 +1672,9 @@ func (lp *LoadPoint) publishSoCAndRange() {
 		if lp.charging() {
 			d = lp.socEstimator.RemainingChargeDuration(socLimit, lp.chargePower)
 		}
-		lp.setRemainingDuration(d)
+		lp.SetRemainingDuration(d)
 
-		lp.setRemainingEnergy(1e3 * lp.socEstimator.RemainingChargeEnergy(socLimit))
+		lp.SetRemainingEnergy(1e3 * lp.socEstimator.RemainingChargeEnergy(socLimit))
 
 		// range
 		if vs, ok := lp.vehicle.(api.VehicleRange); ok {

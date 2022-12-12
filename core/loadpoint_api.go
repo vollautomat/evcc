@@ -289,7 +289,14 @@ func (lp *LoadPoint) GetMaxPower() float64 {
 	return Voltage * lp.GetMaxCurrent() * float64(lp.maxActivePhases())
 }
 
-// setRemainingDuration sets the estimated remaining charging duration
+// SetRemainingDuration sets the estimated remaining charging duration
+func (lp *LoadPoint) SetRemainingDuration(chargeRemainingDuration time.Duration) {
+	lp.Lock()
+	defer lp.Unlock()
+	lp.setRemainingDuration(chargeRemainingDuration)
+}
+
+// setRemainingDuration sets the estimated remaining charging duration (no mutex)
 func (lp *LoadPoint) setRemainingDuration(chargeRemainingDuration time.Duration) {
 	if lp.chargeRemainingDuration != chargeRemainingDuration {
 		lp.chargeRemainingDuration = chargeRemainingDuration
@@ -304,11 +311,15 @@ func (lp *LoadPoint) GetRemainingDuration() time.Duration {
 	return lp.chargeRemainingDuration
 }
 
-// setRemainingEnergy sets the remaining charge energy in Wh
-func (lp *LoadPoint) setRemainingEnergy(chargeRemainingEnergy float64) {
+// SetRemainingEnergy sets the remaining charge energy in Wh
+func (lp *LoadPoint) SetRemainingEnergy(chargeRemainingEnergy float64) {
 	lp.Lock()
 	defer lp.Unlock()
+	lp.setRemainingEnergy(chargeRemainingEnergy)
+}
 
+// setRemainingEnergy sets the remaining charge energy in Wh (no mutex)
+func (lp *LoadPoint) setRemainingEnergy(chargeRemainingEnergy float64) {
 	if lp.chargeRemainingEnergy != chargeRemainingEnergy {
 		lp.chargeRemainingEnergy = chargeRemainingEnergy
 		lp.publish("chargeRemainingEnergy", chargeRemainingEnergy)
