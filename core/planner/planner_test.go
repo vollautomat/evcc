@@ -170,12 +170,30 @@ func TestIsCheap(t *testing.T) {
 func TestNoTariff(t *testing.T) {
 	clck := clock.NewMock()
 
-	p := &Planner{
-		log:   util.NewLogger("foo"),
-		clock: clck,
+	{
+		// check nil
+		p := &Planner{
+			log:   util.NewLogger("foo"),
+			clock: clck,
+		}
+
+		res, err := p.Active(time.Hour, clck.Now().Add(30*time.Minute))
+		assert.NoError(t, err)
+		assert.True(t, res)
 	}
 
-	res, err := p.Active(time.Hour, clck.Now().Add(time.Minute))
-	assert.NoError(t, err)
-	assert.True(t, res)
+	{
+		// check dynamic nil
+		var trf api.Tariff
+
+		p := &Planner{
+			log:    util.NewLogger("foo"),
+			clock:  clck,
+			tariff: trf,
+		}
+
+		res, err := p.Active(time.Hour, clck.Now().Add(30*time.Minute))
+		assert.NoError(t, err)
+		assert.True(t, res)
+	}
 }

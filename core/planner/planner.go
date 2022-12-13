@@ -1,7 +1,6 @@
 package planner
 
 import (
-	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -40,8 +39,9 @@ func (t *Planner) Active(requiredDuration time.Duration, targetTime time.Time) (
 		return false, nil
 	}
 
+	// target charging without tariff
 	if t.tariff == nil {
-		return false, errors.New("no tariff")
+		return t.clock.Now().After(targetTime.Add(-requiredDuration)), nil
 	}
 
 	rates, err := t.tariff.Rates()
@@ -71,7 +71,7 @@ func (t *Planner) Active(requiredDuration time.Duration, targetTime time.Time) (
 
 	t.log.DEBUG.Printf("charge duration: %s, end: %v, find best prices:\n", requiredDuration.Round(time.Minute), targetTime.Round(time.Minute))
 
-	var cheapActive bool
+	var active bool
 	var plannedSlots, currentSlot int
 	var plannedDuration time.Duration
 
@@ -100,7 +100,7 @@ func (t *Planner) Active(requiredDuration time.Duration, targetTime time.Time) (
 
 		// plan covers current slot
 		if slot.Start.Before(t.clock.Now().Add(1)) && slot.End.After(t.clock.Now()) {
-			cheapActive = true
+			active = true
 			currentSlot = plannedSlots
 			t.log.TRACE.Printf(" (now, slot number %v)", currentSlot)
 		}
@@ -114,8 +114,8 @@ func (t *Planner) Active(requiredDuration time.Duration, targetTime time.Time) (
 	// delay start of most expensive slot as long as possible
 	if currentSlot == plannedSlots && plannedSlots > 1 && plannedDuration > requiredDuration+hysteresisDuration {
 		t.log.DEBUG.Printf("cheap times lot, delayed for %s\n", (plannedDuration - requiredDuration).Round(time.Minute))
-		cheapActive = false
+		active = false
 	}
 
-	return cheapActive, nil
+	return active, nil
 }
