@@ -1,6 +1,7 @@
 package planner
 
 import (
+	"errors"
 	"fmt"
 	"sort"
 	"time"
@@ -37,6 +38,10 @@ func (t *Planner) Active(requiredDuration time.Duration, targetTime time.Time) (
 
 	if targetTime.Before(t.clock.Now()) || requiredDuration <= 0 {
 		return false, nil
+	}
+
+	if t.tariff == nil {
+		return false, errors.New("no tariff")
 	}
 
 	rates, err := t.tariff.Rates()

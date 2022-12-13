@@ -6,40 +6,39 @@ import (
 
 	"github.com/benbjohnson/clock"
 	"github.com/evcc-io/evcc/api"
+	"github.com/evcc-io/evcc/mock"
 	"github.com/evcc-io/evcc/util"
+	"github.com/golang/mock/gomock"
+	"github.com/stretchr/testify/assert"
 )
 
-type MockTariff struct {
-	api.Tariff
-	start  time.Time
-	prices []float64
-}
+func rates(prices []float64, start time.Time) api.Rates {
+	res := make(api.Rates, 0, len(prices))
 
-func (m MockTariff) Rates() (api.Rates, error) {
-	start := m.start
-
-	res := make(api.Rates, 0, len(m.prices))
-	for _, v := range m.prices {
+	for i, v := range prices {
+		slotStart := start.Add(time.Duration(i) * time.Hour)
 		ar := api.Rate{
-			Start: start,
-			End:   start.Add(1 * time.Hour),
+			Start: slotStart,
+			End:   slotStart.Add(1 * time.Hour),
 			Price: v,
 		}
-		start = ar.End
 		res = append(res, ar)
 	}
 
-	return res, nil
+	return res
 }
 
 func TestIsCheapSlotNow(t *testing.T) {
+	dt := time.Hour
+	ctrl := gomock.NewController(t)
+
 	type se struct {
 		caseNr    int
 		delay     time.Duration
 		cDuration time.Duration
 		res       bool
 	}
-	dt := time.Hour
+
 	tc := []struct {
 		desc   string
 		prices []float64
@@ -93,17 +92,21 @@ func TestIsCheapSlotNow(t *testing.T) {
 	}
 
 	clck := clock.NewMock()
-	start := clck.Now()
+
 	for _, tc := range tc {
 		t.Logf("%+v", tc.desc)
-		clck.Set(start)
+		t.Logf("set: %v", clck.Now())
+
+		trf := mock.NewMockTariff(ctrl)
+		trf.EXPECT().Rates().AnyTimes().Return(rates(tc.prices, clck.Now()), nil)
 
 		p := &Planner{
 			log:    util.NewLogger("foo"),
 			clock:  clck,
-			tariff: MockTariff{prices: tc.prices, start: start},
+			tariff: trf,
 		}
 
+		start := clck.Now()
 		for _, se := range tc.series {
 			clck.Set(start.Add(se.delay))
 
@@ -115,13 +118,16 @@ func TestIsCheapSlotNow(t *testing.T) {
 }
 
 func TestIsCheap(t *testing.T) {
+	dt := time.Hour
+	ctrl := gomock.NewController(t)
+
 	type se struct {
 		caseNr    int
 		delay     time.Duration
 		cDuration time.Duration
 		res       bool
 	}
-	dt := time.Hour
+
 	tc := []struct {
 		desc   string
 		prices []float64
@@ -138,16 +144,20 @@ func TestIsCheap(t *testing.T) {
 	}
 
 	clck := clock.NewMock()
-	start := clck.Now()
+
 	for _, tc := range tc {
 		t.Logf("%+v", tc.desc)
-		clck.Set(start)
+
+		trf := mock.NewMockTariff(ctrl)
+		trf.EXPECT().Rates().AnyTimes().Return(rates(tc.prices, clck.Now()), nil)
 
 		p := &Planner{
 			log:    util.NewLogger("foo"),
 			clock:  clck,
-			tariff: MockTariff{prices: tc.prices, start: start},
+			tariff: trf,
 		}
+
+		start := clck.Now()
 
 		for _, se := range tc.series {
 			clck.Set(start.Add(se.delay))
@@ -157,4 +167,17 @@ func TestIsCheap(t *testing.T) {
 			}
 		}
 	}
+}
+
+func TestNoTariff(t *testing.T) {
+	clck := clock.NewMock()
+
+	p := &Planner{
+		log:   util.NewLogger("foo"),
+		clock: clck,
+	}
+
+	res, err := p.Active(time.Hour, clck.Now().Add(time.Minute))
+	assert.NoError(t, err)
+	assert.True(t, res)
 }
