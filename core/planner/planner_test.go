@@ -110,9 +110,8 @@ func TestIsCheapSlotNow(t *testing.T) {
 		for _, se := range tc.series {
 			clck.Set(start.Add(se.delay))
 
-			if res, _ := p.Active(se.cDuration, start.Add(tc.end)); se.res != res {
-				t.Errorf("%s case %v: expected %v, got %v", tc.desc, se.caseNr, se.res, res)
-			}
+			res, _ := p.Active(se.cDuration, start.Add(tc.end))
+			assert.Equalf(t, se.res, res, "%s case %v: expected %v, got %v", tc.desc, se.caseNr, se.res, res)
 		}
 	}
 }
@@ -162,9 +161,8 @@ func TestIsCheap(t *testing.T) {
 		for _, se := range tc.series {
 			clck.Set(start.Add(se.delay))
 
-			if res, _ := p.Active(se.cDuration, start.Add(tc.end)); se.res != res {
-				t.Errorf("%s case %v: expected %v, got %v", tc.desc, se.caseNr, se.res, res)
-			}
+			res, _ := p.Active(se.cDuration, start.Add(tc.end))
+			assert.Equalf(t, se.res, res, "%s case %v: expected %v, got %v", tc.desc, se.caseNr, se.res, res)
 		}
 	}
 }
