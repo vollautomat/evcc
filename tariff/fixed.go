@@ -25,9 +25,10 @@ func NewFixed(other map[string]interface{}) (*Fixed, error) {
 
 // Rates implements the api.Tariff interface
 func (t *Fixed) Rates() (api.Rates, error) {
+	start := time.Now().Truncate(time.Hour)
 	rr := api.Rates{{
-		Start: time.Now(),
-		End:   time.Now().Add(time.Hour),
+		Start: start,
+		End:   start.Add(time.Duration(24*7) * time.Hour),
 		Price: t.Price,
 	}}
 
