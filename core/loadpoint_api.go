@@ -202,6 +202,13 @@ func (lp *LoadPoint) SetTargetCharge(finishAt time.Time, soc int) error {
 	return nil
 }
 
+// SetTargetTime sets the charge target time
+func (lp *LoadPoint) SetTargetTime(finishAt time.Time) {
+	lp.Lock()
+	defer lp.Unlock()
+	lp.setTargetTime(finishAt)
+}
+
 // setTargetTime sets the charge target time
 func (lp *LoadPoint) setTargetTime(finishAt time.Time) {
 	lp.targetTime = finishAt

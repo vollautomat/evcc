@@ -462,6 +462,9 @@ func (lp *LoadPoint) evVehicleDisconnectHandler() {
 	lp.setVehicleIdentifier("")
 	lp.stopVehicleDetection()
 
+	// reset target charging
+	lp.SetTargetTime(time.Time{})
+
 	// remove active vehicle if not default
 	if lp.vehicle != lp.defaultVehicle {
 		lp.setActiveVehicle(lp.defaultVehicle)
