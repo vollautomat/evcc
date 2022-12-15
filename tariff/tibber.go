@@ -115,5 +115,5 @@ func (t *Tibber) rates(pi []tibber.PriceInfo) api.Rates {
 func (t *Tibber) Rates() (api.Rates, error) {
 	t.mux.Lock()
 	defer t.mux.Unlock()
-	return t.data, nil
+	return append([]api.Rate{}, t.data...), nil
 }

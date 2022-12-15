@@ -78,5 +78,5 @@ func (t *Awattar) Run() {
 func (t *Awattar) Rates() (api.Rates, error) {
 	t.mux.Lock()
 	defer t.mux.Unlock()
-	return t.data, nil
+	return append([]api.Rate{}, t.data...), nil
 }
