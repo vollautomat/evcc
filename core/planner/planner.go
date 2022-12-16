@@ -35,7 +35,7 @@ func (t *Planner) Active(requiredDuration time.Duration, targetTime time.Time) (
 		return false, nil
 	}
 
-	if targetTime.Before(t.clock.Now()) || requiredDuration <= 0 {
+	if requiredDuration <= 0 {
 		return false, nil
 	}
 
