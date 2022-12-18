@@ -78,7 +78,7 @@ func TestPlanner(t *testing.T) {
 		{"delay expensive middle", []float64{5, 4, 3, 5, 5, 5, 5, 5}, 5 * time.Hour, []se{
 			{1*dt - 1, 70 * time.Minute, false},
 			{1*dt + 1, 70 * time.Minute, false},
-			{2*dt - 1, 61 * time.Minute, true}, // delayed start on expensiv slot
+			{2*dt - 1, 61 * time.Minute, true}, // delayed start on expensive slot
 			{3*dt - 1, 60 * time.Minute, true}, // cheapest slot
 		}},
 		{"disable after known prices, 1h", []float64{5, 4, 3, 2, 1, 0, 0, 0}, 5 * time.Hour, []se{
