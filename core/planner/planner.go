@@ -64,26 +64,18 @@ func (t *Planner) Active(requiredDuration time.Duration, targetTime time.Time) (
 	// sort rates by price and time
 	sort.Sort(rates)
 
-	// Save same duration until next price info update
-	// TODO @schenlap: was passiert hier?
-	if targetTime.After(last) {
-		duration_old := requiredDuration
-		requiredDuration = time.Duration(float64(requiredDuration) * float64(time.Until(last)) / float64(time.Until(targetTime)))
-		t.log.DEBUG.Printf("reduced duration from %s to %s until got new price info after %s", duration_old.Round(time.Minute), requiredDuration.Round(time.Minute), last.Round(time.Minute))
-	}
-
 	// reduce planning horizon to available rates
-	// if targetTime.After(last) {
-	// 	old := requiredDuration
-	// 	requiredDuration = time.Until(last)
-	// 	t.log.DEBUG.Printf("target time beyond available slots- reduced plan horizon from %v to %v", old.Round(time.Minute), requiredDuration.Round(time.Minute))
-	// }
+	if targetTime.After(last) {
+		t.log.DEBUG.Printf("target time beyond available slots- reducing plan horizon from %v to %v", requiredDuration.Round(time.Minute), time.Until(last).Round(time.Minute))
+		requiredDuration = time.Until(last)
+	}
 
 	t.log.DEBUG.Printf("planning %s until %v", requiredDuration.Round(time.Minute), targetTime.Round(time.Minute))
 
 	var active bool
 	var plannedSlots, currentSlot int
-	var plannedDuration time.Duration
+	var planDuration time.Duration
+	var planCost float64
 
 	for _, slot := range rates {
 		// slot not relevant
@@ -91,41 +83,36 @@ func (t *Planner) Active(requiredDuration time.Duration, targetTime time.Time) (
 			continue
 		}
 
-		// // current slot
-		// if (slot.Start.Before(t.clock.Now()) || slot.Start.Equal(targetTime))&& slot.End.After(t.clock.Now()) {
-		// 	slot.Start = t.clock.Now().Add(-1)
-		// }
-
-		// // slot ends after target time
-		// if slot.End.After(targetTime) {
-		// 	slot.End = targetTime.Add(1)
-		// }
-
 		plannedSlots++
-		plannedDuration += slot.End.Sub(slot.Start)
 
 		// slot covers current timestamp
 		if (slot.Start.Before(t.clock.Now()) || slot.Start.Equal(t.clock.Now())) && slot.End.After(t.clock.Now()) {
 			active = true
 			currentSlot = plannedSlots
+			slot.Start = t.clock.Now()
 		}
+
+		planDuration += slot.End.Sub(slot.Start)
+		planCost += float64(slot.End.Sub(slot.Start)) / float64(time.Hour) * slot.Price
 
 		t.log.TRACE.Printf("  slot from: %v to %v cost %.2f, duration running total %s, active: %t",
 			slot.Start.Round(time.Second), slot.End.Round(time.Second),
-			slot.Price, plannedDuration.Round(time.Second), active)
+			slot.Price, planDuration.Round(time.Second), active)
 
 		// we found all necessary cheap slots
-		if plannedDuration >= requiredDuration {
+		if planDuration >= requiredDuration {
 			break
 		}
 	}
 
 	// delay start of most expensive slot as long as possible
 	// TODO @schenlap do we have a test for plannedSlots <=1 vs > 1?
-	if currentSlot == plannedSlots && plannedSlots > 1 && plannedDuration > requiredDuration+hysteresisDuration {
-		t.log.DEBUG.Printf("delaying expensive slot for %s", (plannedDuration - requiredDuration).Round(time.Minute))
+	if currentSlot == plannedSlots && plannedSlots > 1 && planDuration > requiredDuration+hysteresisDuration {
+		t.log.DEBUG.Printf("delaying expensive slot for %s", (planDuration - requiredDuration).Round(time.Minute))
 		active = false
 	}
+
+	t.log.DEBUG.Printf("total plan duration: %v, cost: %.2f", planDuration.Round(time.Minute), planCost)
 
 	return active, nil
 }
