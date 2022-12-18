@@ -133,20 +133,11 @@ func TestNilTariff(t *testing.T) {
 
 	res, err := p.Active(time.Hour, clck.Now().Add(30*time.Minute))
 	assert.NoError(t, err)
-	assert.True(t, res)
-}
+	assert.True(t, res, "should start past start time")
 
-func TestNilTariffTargetInThePast(t *testing.T) {
-	clck := clock.NewMock()
-
-	p := &Planner{
-		log:   util.NewLogger("foo"),
-		clock: clck,
-	}
-
-	res, err := p.Active(time.Hour, clck.Now().Add(-30*time.Minute))
+	res, err = p.Active(time.Hour, clck.Now().Add(-30*time.Minute))
 	assert.NoError(t, err)
-	assert.True(t, res)
+	assert.True(t, res, "should start past target time")
 }
 
 func TestFlatTariffTargetInThePast(t *testing.T) {
@@ -162,7 +153,11 @@ func TestFlatTariffTargetInThePast(t *testing.T) {
 		tariff: trf,
 	}
 
-	res, err := p.Active(time.Hour, clck.Now().Add(-30*time.Minute))
+	res, err := p.Active(time.Hour, clck.Now().Add(30*time.Minute))
 	assert.NoError(t, err)
-	assert.True(t, res)
+	assert.True(t, res, "should start past start time")
+
+	res, err = p.Active(time.Hour, clck.Now().Add(-30*time.Minute))
+	assert.NoError(t, err)
+	assert.True(t, res, "should start past target time")
 }
