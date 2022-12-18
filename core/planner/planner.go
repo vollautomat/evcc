@@ -66,8 +66,17 @@ func (t *Planner) Active(requiredDuration time.Duration, targetTime time.Time) (
 
 	// reduce planning horizon to available rates
 	if targetTime.After(last) {
-		t.log.DEBUG.Printf("target time beyond available slots- reducing plan horizon from %v to %v", requiredDuration.Round(time.Minute), time.Until(last).Round(time.Minute))
-		requiredDuration = time.Until(last)
+		// there is enough time for charging after end of current rates
+		durationAfterRates := targetTime.Sub(last)
+		if durationAfterRates >= requiredDuration {
+			return false, nil
+		}
+
+		// need to use some of the available slots
+		t.log.DEBUG.Printf("target time beyond available slots- reducing plan horizon from %v to %v", requiredDuration.Round(time.Minute), durationAfterRates.Round(time.Minute))
+
+		targetTime = last
+		requiredDuration -= durationAfterRates
 	}
 
 	t.log.DEBUG.Printf("planning %s until %v", requiredDuration.Round(time.Minute), targetTime.Round(time.Minute))
@@ -105,9 +114,10 @@ func (t *Planner) Active(requiredDuration time.Duration, targetTime time.Time) (
 		}
 	}
 
-	// delay start of most expensive slot as long as possible
+	// delay start of most expensive slot as long as possible (case 2)
 	// TODO @schenlap do we have a test for plannedSlots <=1 vs > 1?
 	if currentSlot == plannedSlots && plannedSlots > 1 && planDuration > requiredDuration+hysteresisDuration {
+		// if currentSlot == plannedSlots && planDuration > requiredDuration+hysteresisDuration {
 		t.log.DEBUG.Printf("delaying expensive slot for %s", (planDuration - requiredDuration).Round(time.Minute))
 		active = false
 	}

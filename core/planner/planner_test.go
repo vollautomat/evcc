@@ -44,51 +44,51 @@ func TestPlanner(t *testing.T) {
 		end    time.Duration
 		series []se
 	}{
-		{"falling prices", []float64{5, 4, 3, 2, 1, 0, 0, 0}, 5 * time.Hour, []se{
+		{"falling prices", []float64{5, 4, 3, 2, 1, 0, 0, 0, 10}, 5 * time.Hour, []se{
 			{1*dt - 1, 20 * time.Minute, false},
 			{2*dt - 1, 20 * time.Minute, false},
 			{3*dt - 1, 20 * time.Minute, false},
-			{3*dt + 1, 20 * time.Minute, false},
+			{3 * dt, 20 * time.Minute, false},
 			{4*dt - 1, 20 * time.Minute, false},
 			{4*dt - 30*time.Minute, 20 * time.Minute, false}, // start as late as possible
 			{5*dt - 20*time.Minute, 20 * time.Minute, true},
-			{5*dt + 1, 5 * time.Minute, false}, // after desired charge timer,
+			{5 * dt, 5 * time.Minute, false}, // after desired charge timer,
 		}},
 		{"rising prices", []float64{1, 2, 3, 4, 5, 6, 7, 8}, 5 * time.Hour, []se{
 			{1*dt - 1, time.Hour, true},
 			{2*dt - 1, 5 * time.Minute, true}, // charging took longer than expected
 			{3*dt - 1, 0, false},
-			{5*dt + 1, 0, false}, // after desired charge timer
+			{5 * dt, 0, false}, // after desired charge timer
 		}},
-		{"last slot", []float64{5, 2, 5, 4, 3, 5, 5, 5}, 5 * time.Hour, []se{
+		{"last slot", []float64{5, 2, 5, 4, 3, 5, 5, 5, 10}, 5 * time.Hour, []se{
 			{1*dt - 1, 70 * time.Minute, false},
 			{2*dt - 1, 70 * time.Minute, true},
 			{3*dt - 1, 20 * time.Minute, false},
 			{4*dt - 1, 20 * time.Minute, false},
-			{4*dt + 1, 20 * time.Minute, true}, // start as late as possible
+			{4 * dt, 20 * time.Minute, true}, // start as late as possible
 			{4*dt + 40*time.Minute, 20 * time.Minute, true},
 		}},
-		{"don't pause last slot", []float64{5, 4, 5, 2, 3, 5, 5, 5}, 5 * time.Hour, []se{
+		{"don't pause last slot", []float64{5, 4, 5, 3, 2, 5, 5, 5, 10}, 5 * time.Hour, []se{
 			{1*dt - 1, 70 * time.Minute, false},
 			{2*dt - 1, 70 * time.Minute, false},
 			{3*dt - 1, 70 * time.Minute, false},
-			{4*dt - 1, 20 * time.Minute, true}, // don't pause last slot
-			{4*dt + 1, 20 * time.Minute, true},
+			{4*dt - 1, 20 * time.Minute, false},
+			{4 * dt, 20 * time.Minute, true}, // don't pause last slot
 		}},
-		{"delay expensive middle", []float64{5, 4, 3, 5, 5, 5, 5, 5}, 5 * time.Hour, []se{
+		{"delay expensive middle", []float64{5, 4, 3, 5, 5, 5, 5, 5, 10}, 5 * time.Hour, []se{
 			{1*dt - 1, 70 * time.Minute, false},
-			{1*dt + 1, 70 * time.Minute, false},
+			{1 * dt, 70 * time.Minute, false},
 			{2*dt - 1, 61 * time.Minute, true}, // delayed start on expensive slot
 			{3*dt - 1, 60 * time.Minute, true}, // cheapest slot
 		}},
 		{"disable after known prices, 1h", []float64{5, 4, 3, 2, 1, 0, 0, 0}, 5 * time.Hour, []se{
 			{20 * dt, time.Hour, false},
 		}},
-		{"fixed tariff", []float64{2}, 5 * time.Hour, []se{
+		{"fixed tariff", []float64{2}, 30 * time.Minute, []se{
 			{1, 2 * time.Hour, true},
 			{1, 10 * time.Minute, true},
 		}},
-		{"always expensive", []float64{5, 4, 3, 2, 1, 0, 0, 0}, 5 * time.Hour, []se{
+		{"always expensive", []float64{5, 4, 3, 2, 1, 0, 0, 0, 10}, 5 * time.Hour, []se{
 			{1*dt - 1, time.Minute, false},
 			{2*dt - 1, time.Minute, false},
 			{3*dt - 1, time.Minute, false},
@@ -160,4 +160,26 @@ func TestFlatTariffTargetInThePast(t *testing.T) {
 	res, err = p.Active(time.Hour, clck.Now().Add(-30*time.Minute))
 	assert.NoError(t, err)
 	assert.True(t, res, "should start past target time")
+}
+
+func TestTargetAfterKnownPrices(t *testing.T) {
+	clck := clock.NewMock()
+	ctrl := gomock.NewController(t)
+
+	trf := mock.NewMockTariff(ctrl)
+	trf.EXPECT().Rates().AnyTimes().Return(rates([]float64{0}, clck.Now()), nil)
+
+	p := &Planner{
+		log:    util.NewLogger("foo"),
+		clock:  clck,
+		tariff: trf,
+	}
+
+	res, err := p.Active(40*time.Minute, clck.Now().Add(2*time.Hour)) // charge efficiency does not allow to test with 1h
+	assert.NoError(t, err)
+	assert.False(t, res, "should not start if car can be charged completely after known prices ")
+
+	res, err = p.Active(2*time.Hour, clck.Now().Add(2*time.Hour))
+	assert.NoError(t, err)
+	assert.True(t, res, "should plan if car can not be charged completely after known prices ")
 }
