@@ -33,7 +33,6 @@ func TestIsCheapSlotNow(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	type se struct {
-		caseNr    int
 		delay     time.Duration
 		cDuration time.Duration
 		res       bool
@@ -46,48 +45,48 @@ func TestIsCheapSlotNow(t *testing.T) {
 		series []se
 	}{
 		{"falling prices", []float64{5, 4, 3, 2, 1, 0, 0, 0}, 5 * time.Hour, []se{
-			{1, 1*dt - 1, 20 * time.Minute, false},
-			{2, 2*dt - 1, 20 * time.Minute, false},
-			{3, 3*dt - 1, 20 * time.Minute, false},
-			{4, 3*dt + 1, 20 * time.Minute, false},
-			{5, 4*dt - 1, 20 * time.Minute, false},
-			{6, 4*dt - 30*time.Minute, 20 * time.Minute, false}, // start as late as possible
-			{7, 5*dt - 20*time.Minute, 20 * time.Minute, true},
-			{8, 5*dt + 1, 5 * time.Minute, false}, // after desired charge timer,
+			{1*dt - 1, 20 * time.Minute, false},
+			{2*dt - 1, 20 * time.Minute, false},
+			{3*dt - 1, 20 * time.Minute, false},
+			{3*dt + 1, 20 * time.Minute, false},
+			{4*dt - 1, 20 * time.Minute, false},
+			{4*dt - 30*time.Minute, 20 * time.Minute, false}, // start as late as possible
+			{5*dt - 20*time.Minute, 20 * time.Minute, true},
+			{5*dt + 1, 5 * time.Minute, false}, // after desired charge timer,
 		}},
 		{"raising prices", []float64{1, 2, 3, 4, 5, 6, 7, 8}, 5 * time.Hour, []se{
-			{1, 1*dt - 1, time.Hour, true},
-			{2, 2*dt - 1, 5 * time.Minute, true}, // charging took longer than expected
-			{3, 3*dt - 1, 0, false},
-			{4, 5*dt + 1, 0, false}, // after desired charge timer
+			{1*dt - 1, time.Hour, true},
+			{2*dt - 1, 5 * time.Minute, true}, // charging took longer than expected
+			{3*dt - 1, 0, false},
+			{5*dt + 1, 0, false}, // after desired charge timer
 		}},
 		{"last slot", []float64{5, 2, 5, 4, 3, 5, 5, 5}, 5 * time.Hour, []se{
-			{1, 1*dt - 1, 70 * time.Minute, false},
-			{2, 2*dt - 1, 70 * time.Minute, true},
-			{3, 3*dt - 1, 20 * time.Minute, false},
-			{4, 4*dt - 1, 20 * time.Minute, false},
-			{5, 4*dt + 1, 20 * time.Minute, true}, // start as late as possible
-			{6, 4*dt + 40*time.Minute, 20 * time.Minute, true},
+			{1*dt - 1, 70 * time.Minute, false},
+			{2*dt - 1, 70 * time.Minute, true},
+			{3*dt - 1, 20 * time.Minute, false},
+			{4*dt - 1, 20 * time.Minute, false},
+			{4*dt + 1, 20 * time.Minute, true}, // start as late as possible
+			{4*dt + 40*time.Minute, 20 * time.Minute, true},
 		}},
 		{"don't stop for last slot", []float64{5, 4, 5, 2, 3, 5, 5, 5}, 5 * time.Hour, []se{
-			{1, 1*dt - 1, 70 * time.Minute, false},
-			{2, 2*dt - 1, 70 * time.Minute, false},
-			{3, 3*dt - 1, 70 * time.Minute, false},
-			{4, 4*dt - 1, 20 * time.Minute, true}, // don't pause last slot
-			{5, 4*dt + 1, 20 * time.Minute, true},
+			{1*dt - 1, 70 * time.Minute, false},
+			{2*dt - 1, 70 * time.Minute, false},
+			{3*dt - 1, 70 * time.Minute, false},
+			{4*dt - 1, 20 * time.Minute, true}, // don't pause last slot
+			{4*dt + 1, 20 * time.Minute, true},
 		}},
 		{"delay expensiv middle", []float64{5, 4, 3, 5, 5, 5, 5, 5}, 5 * time.Hour, []se{
-			{1, 1*dt - 1, 70 * time.Minute, false},
-			{1, 1*dt + 1, 70 * time.Minute, false},
-			{2, 2*dt - 1, 61 * time.Minute, true}, // delayed start on expensiv slot
-			{3, 3*dt - 1, 60 * time.Minute, true}, // cheapest slot
+			{1*dt - 1, 70 * time.Minute, false},
+			{1*dt + 1, 70 * time.Minute, false},
+			{2*dt - 1, 61 * time.Minute, true}, // delayed start on expensiv slot
+			{3*dt - 1, 60 * time.Minute, true}, // cheapest slot
 		}},
 		{"disable after known prices, 1h", []float64{5, 4, 3, 2, 1, 0, 0, 0}, 5 * time.Hour, []se{
-			{1, 20 * dt, time.Hour, false},
+			{20 * dt, time.Hour, false},
 		}},
 		{"fixed tariff", []float64{2}, 5 * time.Hour, []se{
-			{1, 1, 2 * time.Hour, true},
-			{2, 1, 10 * time.Minute, true},
+			{1, 2 * time.Hour, true},
+			{1, 10 * time.Minute, true},
 		}},
 	}
 
@@ -107,11 +106,11 @@ func TestIsCheapSlotNow(t *testing.T) {
 		}
 
 		start := clck.Now()
-		for _, se := range tc.series {
+		for idx, se := range tc.series {
 			clck.Set(start.Add(se.delay))
 
 			res, _ := p.Active(se.cDuration, start.Add(tc.end))
-			assert.Equalf(t, se.res, res, "%s case %v: expected %v, got %v", tc.desc, se.caseNr, se.res, res)
+			assert.Equalf(t, se.res, res, "%s case %d: expected %v, got %v", tc.desc, idx+1, se.res, res)
 		}
 	}
 }
@@ -121,7 +120,6 @@ func TestIsCheap(t *testing.T) {
 	ctrl := gomock.NewController(t)
 
 	type se struct {
-		caseNr    int
 		delay     time.Duration
 		cDuration time.Duration
 		res       bool
@@ -134,11 +132,11 @@ func TestIsCheap(t *testing.T) {
 		series []se
 	}{
 		{"always expensive", []float64{5, 4, 3, 2, 1, 0, 0, 0}, 5 * time.Hour, []se{
-			{1, 1*dt - 1, time.Minute, false},
-			{2, 2*dt - 1, time.Minute, false},
-			{3, 3*dt - 1, time.Minute, false},
-			{4, 4*dt - 1, time.Minute, false},
-			{5, 5*dt - 1, time.Minute, true}, // cheapest price
+			{1*dt - 1, time.Minute, false},
+			{2*dt - 1, time.Minute, false},
+			{3*dt - 1, time.Minute, false},
+			{4*dt - 1, time.Minute, false},
+			{5*dt - 1, time.Minute, true}, // cheapest price
 		}},
 	}
 
@@ -158,11 +156,11 @@ func TestIsCheap(t *testing.T) {
 
 		start := clck.Now()
 
-		for _, se := range tc.series {
+		for idx, se := range tc.series {
 			clck.Set(start.Add(se.delay))
 
 			res, _ := p.Active(se.cDuration, start.Add(tc.end))
-			assert.Equalf(t, se.res, res, "%s case %v: expected %v, got %v", tc.desc, se.caseNr, se.res, res)
+			assert.Equalf(t, se.res, res, "%s case %d: expected %v, got %v", tc.desc, idx+1, se.res, res)
 		}
 	}
 }
