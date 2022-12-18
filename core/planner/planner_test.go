@@ -123,45 +123,46 @@ func TestPlanner(t *testing.T) {
 	}
 }
 
-func TestNoTariff(t *testing.T) {
+func TestNilTariff(t *testing.T) {
 	clck := clock.NewMock()
 
-	t.Run("nil tariff", func(t *testing.T) {
-		p := &Planner{
-			log:   util.NewLogger("foo"),
-			clock: clck,
-		}
+	p := &Planner{
+		log:   util.NewLogger("foo"),
+		clock: clck,
+	}
 
-		res, err := p.Active(time.Hour, clck.Now().Add(30*time.Minute))
-		assert.NoError(t, err)
-		assert.True(t, res)
-	})
+	res, err := p.Active(time.Hour, clck.Now().Add(30*time.Minute))
+	assert.NoError(t, err)
+	assert.True(t, res)
+}
 
-	t.Run("continue even if target date is in the past (without tariff)", func(t *testing.T) {
-		p := &Planner{
-			log:   util.NewLogger("foo"),
-			clock: clck,
-		}
+func TestNilTariffTargetInThePast(t *testing.T) {
+	clck := clock.NewMock()
 
-		res, err := p.Active(time.Hour, clck.Now().Add(-30*time.Minute))
-		assert.NoError(t, err)
-		assert.True(t, res)
-	})
+	p := &Planner{
+		log:   util.NewLogger("foo"),
+		clock: clck,
+	}
 
-	t.Run("continue even if target date is in the past (with tariff)", func(t *testing.T) {
-		ctrl := gomock.NewController(t)
+	res, err := p.Active(time.Hour, clck.Now().Add(-30*time.Minute))
+	assert.NoError(t, err)
+	assert.True(t, res)
+}
 
-		trf := mock.NewMockTariff(ctrl)
-		trf.EXPECT().Rates().AnyTimes().Return(rates([]float64{0}, clck.Now()), nil)
+func TestFlatTariffTargetInThePast(t *testing.T) {
+	clck := clock.NewMock()
+	ctrl := gomock.NewController(t)
 
-		p := &Planner{
-			log:    util.NewLogger("foo"),
-			clock:  clck,
-			tariff: trf,
-		}
+	trf := mock.NewMockTariff(ctrl)
+	trf.EXPECT().Rates().AnyTimes().Return(rates([]float64{0}, clck.Now()), nil)
 
-		res, err := p.Active(time.Hour, clck.Now().Add(-30*time.Minute))
-		assert.NoError(t, err)
-		assert.True(t, res)
-	})
+	p := &Planner{
+		log:    util.NewLogger("foo"),
+		clock:  clck,
+		tariff: trf,
+	}
+
+	res, err := p.Active(time.Hour, clck.Now().Add(-30*time.Minute))
+	assert.NoError(t, err)
+	assert.True(t, res)
 }
