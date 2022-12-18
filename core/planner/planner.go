@@ -96,7 +96,7 @@ func (t *Planner) Active(requiredDuration time.Duration, targetTime time.Time) (
 		planCost += float64(slot.End.Sub(slot.Start)) / float64(time.Hour) * slot.Price
 
 		t.log.TRACE.Printf("  slot from: %v to %v cost %.2f, duration running total %s, active: %t",
-			slot.Start.Round(time.Second), slot.End.Round(time.Second),
+			slot.Start.Round(time.Minute), slot.End.Round(time.Minute),
 			slot.Price, planDuration.Round(time.Second), active)
 
 		// we found all necessary cheap slots
