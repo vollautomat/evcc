@@ -40,7 +40,8 @@ func (t *Planner) Active(requiredDuration time.Duration, targetTime time.Time) (
 
 	// calculate start time
 	requiredDuration = time.Duration(float64(requiredDuration) / soc.ChargeEfficiency)
-	targetElapsed := t.clock.Now().After(targetTime.Add(-requiredDuration))
+	latestStart := targetTime.Add(-requiredDuration)
+	targetElapsed := t.clock.Now().After(latestStart)
 
 	// target charging without tariff
 	if t.tariff == nil {
