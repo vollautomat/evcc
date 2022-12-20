@@ -44,7 +44,7 @@ func (t *Planner) Active(requiredDuration time.Duration, targetTime time.Time) (
 	targetElapsed := t.clock.Now().After(latestStart)
 
 	// target charging without tariff
-	if t.tariff == nil {
+	if t.tariff == nil || targetElapsed {
 		return targetElapsed, nil
 	}
 

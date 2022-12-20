@@ -52,7 +52,7 @@ func TestPlanner(t *testing.T) {
 			{4*dt - 1, 20 * time.Minute, false},
 			{4*dt - 30*time.Minute, 20 * time.Minute, false}, // start as late as possible
 			{5*dt - 20*time.Minute, 20 * time.Minute, true},
-			{5 * dt, 5 * time.Minute, false}, // after desired charge timer,
+			{5 * dt, 5 * time.Minute, true}, // after desired charge timer,
 		}},
 		{"rising prices", []float64{1, 2, 3, 4, 5, 6, 7, 8}, 5 * time.Hour, []se{
 			{1*dt - 1, time.Hour, true},
@@ -80,9 +80,6 @@ func TestPlanner(t *testing.T) {
 			{1 * dt, 70 * time.Minute, false},
 			{2*dt - 1, 61 * time.Minute, true}, // delayed start on expensive slot
 			{3*dt - 1, 60 * time.Minute, true}, // cheapest slot
-		}},
-		{"disable after known prices, 1h", []float64{5, 4, 3, 2, 1, 0, 0, 0}, 5 * time.Hour, []se{
-			{20 * dt, time.Hour, false},
 		}},
 		{"fixed tariff", []float64{2}, 30 * time.Minute, []se{
 			{1, 2 * time.Hour, true},
@@ -182,4 +179,30 @@ func TestTargetAfterKnownPrices(t *testing.T) {
 	res, err = p.Active(2*time.Hour, clck.Now().Add(2*time.Hour))
 	assert.NoError(t, err)
 	assert.True(t, res, "should plan if car can not be charged completely after known prices ")
+}
+
+func TestChargeAfterTargetTime(t *testing.T) {
+	clck := clock.NewMock()
+	ctrl := gomock.NewController(t)
+
+	trf := mock.NewMockTariff(ctrl)
+	trf.EXPECT().Rates().AnyTimes().Return(rates([]float64{0, 0, 0, 0}, clck.Now()), nil)
+
+	p := &Planner{
+		log:    util.NewLogger("foo"),
+		clock:  clck,
+		tariff: trf,
+	}
+
+	res, err := p.Active(time.Minute, clck.Now())
+	assert.NoError(t, err)
+	assert.True(t, res, "should start when target time reached and car not fully charged")
+
+	res, err = p.Active(time.Hour, clck.Now().Add(-time.Hour))
+	assert.NoError(t, err)
+	assert.True(t, res, "should start when target time past and car not fully charged")
+
+	res, err = p.Active(0, clck.Now().Add(-time.Hour))
+	assert.NoError(t, err)
+	assert.False(t, res, "should not start when fully charged")
 }
