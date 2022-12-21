@@ -736,13 +736,18 @@ func (lp *LoadPoint) minSocNotReached() bool {
 		lp.vehicleSoc < float64(lp.SoC.min)
 }
 
+// setPlanActive updates plan active flag
+func (lp *LoadPoint) setPlanActive(active bool) {
+	lp.planActive = active
+	lp.publish("planActive", lp.planActive)
+}
+
 // resetPlan stops an active plan and resets target time
 func (lp *LoadPoint) resetPlan() {
 	if lp.planActive && lp.clock.Now().After(lp.targetTime) && !lp.targetTime.IsZero() {
 		lp.setTargetTime(time.Time{})
 	}
-	lp.planActive = false
-	lp.publish("planActive", lp.planActive)
+	lp.setPlanActive(false)
 }
 
 // plannerActive checks if charging plan is active
@@ -780,8 +785,7 @@ func (lp *LoadPoint) plannerActive() (active bool) {
 	// in that case, continue charging
 	if active {
 		// remember last active plan's end time
-		lp.planActive = true
-		lp.publish("planActive", lp.planActive)
+		lp.setPlanActive(true)
 	} else if lp.planActive && lp.clock.Now().After(lp.targetTime) && !lp.targetTime.IsZero() {
 		// if past target time but charge goal still not met continue charging
 		active = true
