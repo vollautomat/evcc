@@ -113,7 +113,8 @@ func TestPlanner(t *testing.T) {
 			for idx, se := range tc.series {
 				clck.Set(start.Add(se.delay))
 
-				res, _ := p.Active(se.cDuration, start.Add(tc.end))
+				res, err := p.Active(se.cDuration, start.Add(tc.end))
+				assert.NoError(t, err)
 				assert.Equalf(t, se.res, res, "%s case %d: expected %v, got %v", tc.desc, idx+1, se.res, res)
 			}
 		})

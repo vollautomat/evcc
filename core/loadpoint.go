@@ -143,7 +143,8 @@ type LoadPoint struct {
 
 	// target charging
 	planner    *planner.Planner
-	targetTime time.Time
+	targetTime time.Time // time goal
+	planActive bool      // plan is active
 
 	// cached state
 	status         api.ChargeStatus       // Charger status
@@ -481,6 +482,9 @@ func (lp *LoadPoint) evVehicleDisconnectHandler() {
 
 	// soc update reset
 	lp.socUpdated = time.Time{}
+
+	// reset plan once charge goal is met
+	lp.resetPlan()
 }
 
 // evVehicleSoCProgressHandler sends external start event
@@ -732,6 +736,15 @@ func (lp *LoadPoint) minSocNotReached() bool {
 		lp.vehicleSoc < float64(lp.SoC.min)
 }
 
+// resetPlan stops an active plan and resets target time
+func (lp *LoadPoint) resetPlan() {
+	if lp.planActive && lp.clock.Now().After(lp.targetTime) && !lp.targetTime.IsZero() {
+		lp.setTargetTime(time.Time{})
+	}
+	lp.planActive = false
+	lp.publish("planActive", lp.planActive)
+}
+
 // plannerActive checks if charging plan is active
 func (lp *LoadPoint) plannerActive() (active bool) {
 	defer func() {
@@ -761,6 +774,17 @@ func (lp *LoadPoint) plannerActive() (active bool) {
 	if err != nil {
 		lp.log.ERROR.Println("planner:", err)
 		return false
+	}
+
+	// if the plan did not work, we may still be charging beyond plan end
+	// in that case, continue charging
+	if active {
+		// remember last active plan's end time
+		lp.planActive = true
+		lp.publish("planActive", lp.planActive)
+	} else if lp.planActive && lp.clock.Now().After(lp.targetTime) && !lp.targetTime.IsZero() {
+		// if past target time but charge goal still not met continue charging
+		active = true
 	}
 
 	return active
@@ -804,6 +828,9 @@ func (lp *LoadPoint) disableUnlessClimater() error {
 		lp.log.DEBUG.Println("climater active")
 		current = lp.GetMinCurrent()
 	}
+
+	// reset plan once charge goal is met
+	lp.resetPlan()
 
 	return lp.setLimit(current, true)
 }
