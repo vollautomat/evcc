@@ -463,9 +463,6 @@ func (lp *LoadPoint) evVehicleDisconnectHandler() {
 	lp.setVehicleIdentifier("")
 	lp.stopVehicleDetection()
 
-	// reset target charging
-	lp.SetTargetTime(time.Time{})
-
 	// remove active vehicle if not default
 	if lp.vehicle != lp.defaultVehicle {
 		lp.setActiveVehicle(lp.defaultVehicle)
@@ -484,7 +481,7 @@ func (lp *LoadPoint) evVehicleDisconnectHandler() {
 	lp.socUpdated = time.Time{}
 
 	// reset plan once charge goal is met
-	lp.resetPlan()
+	lp.setPlanActive(false)
 }
 
 // evVehicleSoCProgressHandler sends external start event
@@ -742,14 +739,6 @@ func (lp *LoadPoint) setPlanActive(active bool) {
 	lp.publish("planActive", lp.planActive)
 }
 
-// resetPlan stops an active plan and resets target time
-func (lp *LoadPoint) resetPlan() {
-	if lp.planActive && lp.clock.Now().After(lp.targetTime) && !lp.targetTime.IsZero() {
-		lp.setTargetTime(time.Time{})
-	}
-	lp.setPlanActive(false)
-}
-
 // plannerActive checks if charging plan is active
 func (lp *LoadPoint) plannerActive() (active bool) {
 	defer func() {
@@ -834,7 +823,7 @@ func (lp *LoadPoint) disableUnlessClimater() error {
 	}
 
 	// reset plan once charge goal is met
-	lp.resetPlan()
+	lp.setPlanActive(false)
 
 	return lp.setLimit(current, true)
 }
