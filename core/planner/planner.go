@@ -10,8 +10,6 @@ import (
 	"github.com/evcc-io/evcc/util"
 )
 
-const hysteresisDuration = 5 * time.Minute
-
 // Planner plans a series of charging slots for a given (variable) tariff
 type Planner struct {
 	log    *util.Logger
@@ -111,7 +109,7 @@ func (t *Planner) Active(requiredDuration time.Duration, targetTime time.Time) (
 	}
 
 	// delay start of most expensive slot if it is not the last and only slot
-	if currentSlot == plannedSlots && plannedSlots > 1 && planDuration > requiredDuration+hysteresisDuration {
+	if currentSlot == plannedSlots && plannedSlots > 1 && planDuration > requiredDuration {
 		t.log.DEBUG.Printf("delaying expensive slot for %s", (planDuration - requiredDuration).Round(time.Minute))
 		active = false
 	}
