@@ -37,11 +37,11 @@ func (t *Planner) Active(requiredDuration time.Duration, targetTime time.Time) (
 	// calculate start time
 	requiredDuration = time.Duration(float64(requiredDuration) / soc.ChargeEfficiency)
 	latestStart := targetTime.Add(-requiredDuration)
-	targetElapsed := t.clock.Now().After(latestStart)
+	startElapsed := t.clock.Now().After(latestStart)
 
 	// target charging without tariff
-	if t.tariff == nil || targetElapsed {
-		return targetElapsed, nil
+	if t.tariff == nil || startElapsed {
+		return startElapsed, nil
 	}
 
 	rates, err := t.tariff.Rates()
@@ -51,7 +51,7 @@ func (t *Planner) Active(requiredDuration time.Duration, targetTime time.Time) (
 
 	// treat like normal target charging if we don't have rates
 	if len(rates) == 0 {
-		return targetElapsed, nil
+		return startElapsed, nil
 	}
 
 	// rates are by default sorted by date, oldest to newest
