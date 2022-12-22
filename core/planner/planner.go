@@ -28,10 +28,6 @@ func New(log *util.Logger, tariff api.Tariff) *Planner {
 	}
 }
 
-// TODO separate plan method
-// func (t *Planner) Plan(rates api.Rates, requiredDuration time.Duration, targetTime time.Time) (bool, error) {
-// }
-
 // Active determines if current slot should be used for charging for a total required duration until target time
 func (t *Planner) Active(requiredDuration time.Duration, targetTime time.Time) (bool, error) {
 	if t == nil || requiredDuration <= 0 {
@@ -55,7 +51,6 @@ func (t *Planner) Active(requiredDuration time.Duration, targetTime time.Time) (
 
 	// treat like normal target charging if we don't have rates
 	if len(rates) == 0 {
-		t.log.WARN.Printf("rates unavailable")
 		return targetElapsed, nil
 	}
 
