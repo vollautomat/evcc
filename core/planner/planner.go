@@ -110,10 +110,8 @@ func (t *Planner) Active(requiredDuration time.Duration, targetTime time.Time) (
 		}
 	}
 
-	// delay start of most expensive slot as long as possible (case 2)
-	// TODO @schenlap do we have a test for plannedSlots <=1 vs > 1?
+	// delay start of most expensive slot if it is not the last and only slot
 	if currentSlot == plannedSlots && plannedSlots > 1 && planDuration > requiredDuration+hysteresisDuration {
-		// if currentSlot == plannedSlots && planDuration > requiredDuration+hysteresisDuration {
 		t.log.DEBUG.Printf("delaying expensive slot for %s", (planDuration - requiredDuration).Round(time.Minute))
 		active = false
 	}
