@@ -131,12 +131,12 @@ func NewSiteFromConfig(
 	for _, lp := range loadpoints {
 		lp.coordinator = coordinator.NewAdapter(lp, site.coordinator)
 
-		// planner
-		gridTariff := site.tariffs.Grid
-		if gridTariff == nil {
-			gridTariff = new(tariff.Fixed)
+		if plannerTariff := site.tariffs.Planner; plannerTariff != nil {
+			// planner tariff
+			lp.planner = planner.New(lp.log, plannerTariff)
+		} else {
+			lp.planner = planner.New(lp.log, site.tariffs.Grid)
 		}
-		lp.planner = planner.New(lp.log, gridTariff)
 
 		if serverdb.Instance != nil {
 			var err error
