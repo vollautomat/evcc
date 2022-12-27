@@ -12,12 +12,18 @@ const priceSlots1 = [
 	{ price: 0.57, start: "2022-12-23T02:00:00Z" },
 	{ price: 0.42, start: "2022-12-23T03:00:00Z" },
 ];
+
+const chargingSlots = [{ start: "2022-12-22T21:00:00Z", end: "2022-12-22T23:00:00Z" }];
 </script>
 
 <template>
 	<Story title="TargetChargePlan">
 		<Variant title="standard">
-			<TargetChargePlan :price-slots="priceSlots1" currency="EUR" />
+			<TargetChargePlan
+				:price-slots="priceSlots1"
+				:charging-slots="chargingSlots"
+				currency="EUR"
+			/>
 		</Variant>
 	</Story>
 </template>

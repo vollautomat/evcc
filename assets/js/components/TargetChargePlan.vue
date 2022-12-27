@@ -7,10 +7,21 @@
 				<div class="box" :style="priceStyle(price.price)"></div>
 			</div>
 		</div>
+		<hr />
+		<div class="chargingSlots">
+			<div
+				v-for="chargingSlot in chargingSlots"
+				:key="chargingSlot.start"
+				class="chargingSlot"
+			>
+				<shopicon-filled-lightning class="icon" size="s"></shopicon-filled-lightning>
+			</div>
+		</div>
 	</div>
 </template>
 
 <script>
+import "@h2d2/shopicons/es/filled/lightning";
 import formatter from "../mixins/formatter";
 
 export default {
@@ -19,7 +30,7 @@ export default {
 	props: {
 		priceSlots: Array,
 		co2Slots: Array,
-		plannedSlots: Array,
+		chargingSlots: Array,
 		currency: String,
 		energyPrice: Number,
 		targetTime: String,
@@ -63,5 +74,23 @@ export default {
 }
 .box {
 	background-color: orange;
+	border-radius: 10px 10px 0 0;
+}
+.chargingSlots {
+	display: flex;
+}
+.chargingSlot {
+	margin-left: 34%;
+	height: 1.4rem;
+	width: 30%;
+	background-color: var(--evcc-dark-green);
+	border-radius: 10px;
+	display: flex;
+	justify-content: center;
+}
+
+.chargingSlot .icon {
+	color: #333;
+	position: relative;
 }
 </style>
