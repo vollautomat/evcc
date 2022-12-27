@@ -2,6 +2,12 @@
 	<div class="root">
 		<h1>Plan</h1>
 		<div class="prices">
+			<div class="me-3">
+				<shopicon-regular-powersupply
+					class="gridIcon"
+					size="m"
+				></shopicon-regular-powersupply>
+			</div>
 			<div v-for="price in priceSlots" :key="price.start" class="price">
 				{{ fmtPricePerKWh(price.price, currency).replace("/kWh", "") }}
 				<div class="box" :style="priceStyle(price.price)"></div>
@@ -9,19 +15,25 @@
 		</div>
 		<hr />
 		<div class="chargingSlots">
+			<div class="me-3">
+				<shopicon-regular-lightning
+					class="chargingIcon"
+					size="m"
+				></shopicon-regular-lightning>
+			</div>
 			<div
 				v-for="chargingSlot in chargingSlots"
 				:key="chargingSlot.start"
 				class="chargingSlot"
-			>
-				<shopicon-filled-lightning class="icon" size="s"></shopicon-filled-lightning>
-			</div>
+			></div>
 		</div>
 	</div>
 </template>
 
 <script>
-import "@h2d2/shopicons/es/filled/lightning";
+import "@h2d2/shopicons/es/regular/lightning";
+import "@h2d2/shopicons/es/regular/powersupply";
+
 import formatter from "../mixins/formatter";
 
 export default {
@@ -55,11 +67,13 @@ export default {
 <style scoped>
 .root {
 	overflow: hidden;
+	--height: 80px;
 }
 .prices {
 	display: flex;
-	height: 100px;
+	height: var(--height);
 	justify-content: stretch;
+	align-items: flex-end;
 }
 .price {
 	flex-basis: 0;
@@ -73,24 +87,30 @@ export default {
 	flex-direction: column;
 }
 .box {
-	background-color: orange;
-	border-radius: 10px 10px 0 0;
+	background: linear-gradient(0deg, #999, #000);
+	background-size: 100% var(--height);
+	background-position: bottom;
+	border-radius: 6px 6px 0 0;
 }
 .chargingSlots {
 	display: flex;
+	align-items: center;
 }
 .chargingSlot {
 	margin-left: 34%;
-	height: 1.4rem;
 	width: 30%;
-	background-color: var(--evcc-dark-green);
-	border-radius: 10px;
-	display: flex;
-	justify-content: center;
+	background-color: var(--evcc-darker-green);
+	height: 6px;
+	border-radius: 6px;
 }
-
-.chargingSlot .icon {
-	color: #333;
-	position: relative;
+.chargingIcon {
+	color: var(--evcc-darker-green);
+}
+.gridIcon {
+	color: #999;
+}
+hr {
+	border: none;
+	border-bottom: 2px solid black;
 }
 </style>
