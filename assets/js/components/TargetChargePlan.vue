@@ -1,6 +1,7 @@
 <template>
 	<div class="root">
 		<h1>Plan</h1>
+		<canvas class="plan" ref="plan"></canvas>
 		<div class="prices">
 			<div class="me-3">
 				<shopicon-regular-powersupply
@@ -33,8 +34,32 @@
 <script>
 import "@h2d2/shopicons/es/regular/lightning";
 import "@h2d2/shopicons/es/regular/powersupply";
-
 import formatter from "../mixins/formatter";
+import {
+	Chart,
+	LinearScale,
+	CategoryScale,
+	PointElement,
+	LineElement,
+	LineController,
+	Filler,
+	TimeScale,
+	BarController,
+	BarElement,
+} from "chart.js";
+import "chartjs-adapter-luxon";
+
+Chart.register(
+	LinearScale,
+	CategoryScale,
+	PointElement,
+	LineElement,
+	LineController,
+	Filler,
+	TimeScale,
+	BarController,
+	BarElement
+);
 
 export default {
 	name: "TargetChargePlan",
@@ -55,6 +80,48 @@ export default {
 			});
 			return result;
 		},
+	},
+	mounted() {
+		const RED = "rgb(255, 99, 132)";
+
+		const labels = [
+			new Date("2023-01-01T01:00:00"),
+			new Date("2023-01-01T02:00:00"),
+			new Date("2023-01-01T02:30:00"),
+			new Date("2023-01-01T03:00:00"),
+			new Date("2023-01-01T08:00:00"),
+			new Date("2023-01-01T09:00:00"),
+			new Date("2023-01-01T10:00:00"),
+		];
+		const data = {
+			labels: labels,
+			datasets: [
+				{
+					label: "Dataset 1",
+					data: [10, 30, 48, 20, 25, 44, 10],
+					borderColor: RED,
+					backgroundColor: RED,
+					borderRadius: 10,
+					inflateAmount: 20,
+					fill: true,
+					stepped: true,
+				},
+			],
+		};
+		const config = {
+			type: "bar",
+			data: data,
+			options: {
+				responsive: true,
+				scales: {
+					x: {
+						type: "time",
+						position: "left",
+					},
+				},
+			},
+		};
+		new Chart(this.$refs.plan, config);
 	},
 	methods: {
 		priceStyle(price) {
