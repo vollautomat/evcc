@@ -1,6 +1,7 @@
 package meter
 
 import (
+	"context"
 	"encoding/json"
 	"errors"
 	"sync"
@@ -9,6 +10,7 @@ import (
 	"github.com/evcc-io/evcc/api"
 	"github.com/evcc-io/evcc/meter/tibber"
 	"github.com/evcc-io/evcc/util"
+	"github.com/evcc-io/evcc/util/request"
 	"github.com/hasura/go-graphql-client"
 )
 
@@ -43,18 +45,31 @@ func NewTibberFromConfig(other map[string]interface{}) (api.Meter, error) {
 		log: util.NewLogger("pulse").Redact(cc.Token, cc.HomeID),
 	}
 
-	if cc.HomeID == "" {
-		// query client
-		qclient := tibber.NewClient(t.log, cc.Token)
+	// query client
+	qclient := tibber.NewClient(t.log, cc.Token)
 
+	if cc.HomeID == "" {
 		var err error
 		if cc.HomeID, err = qclient.DefaultHomeID(); err != nil {
 			return nil, err
 		}
 	}
 
+	var res struct {
+		Viewer struct {
+			WebsocketSubscriptionUrl string
+		}
+	}
+
+	ctx, cancel := context.WithTimeout(context.Background(), request.Timeout)
+	defer cancel()
+
+	if err := qclient.Query(ctx, &res, nil); err != nil {
+		return nil, err
+	}
+
 	// subscription client
-	client := graphql.NewSubscriptionClient(tibber.SubscriptionURI).
+	client := graphql.NewSubscriptionClient(res.Viewer.WebsocketSubscriptionUrl).
 		WithConnectionParams(map[string]any{
 			"token": cc.Token,
 		}).

@@ -2,10 +2,7 @@ package tibber
 
 import "time"
 
-const (
-	URI             = "https://api.tibber.com/v1-beta/gql"
-	SubscriptionURI = "wss://api.tibber.com/v1-beta/gql/subscriptions"
-)
+const URI = "https://api.tibber.com/v1-beta/gql"
 
 type Home struct {
 	ID                string
