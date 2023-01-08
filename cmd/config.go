@@ -60,7 +60,8 @@ type config struct {
 	Database     dbConfig
 	Mqtt         mqttConfig
 	ModbusProxy  []proxyConfig
-	Javascript   []javascriptConfig
+	VMs          []vmConfig
+	Javascript   []javascriptConfig // TODO deprecated
 	Influx       server.InfluxConfig
 	EEBus        map[string]interface{}
 	HEMS         typedConfig
@@ -76,6 +77,12 @@ type config struct {
 type mqttConfig struct {
 	mqtt.Config `mapstructure:",squash"`
 	Topic       string
+}
+
+type vmConfig struct {
+	Type   string
+	Name   string
+	Script string
 }
 
 type javascriptConfig struct {

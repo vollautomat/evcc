@@ -13,6 +13,7 @@ import (
 	"github.com/evcc-io/evcc/core"
 	"github.com/evcc-io/evcc/core/loadpoint"
 	"github.com/evcc-io/evcc/hems"
+	"github.com/evcc-io/evcc/provider/golang"
 	"github.com/evcc-io/evcc/provider/javascript"
 	"github.com/evcc-io/evcc/provider/mqtt"
 	"github.com/evcc-io/evcc/push"
@@ -29,6 +30,7 @@ import (
 	"github.com/libp2p/zeroconf/v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
+	"github.com/traefik/yaegi/interp"
 	"golang.org/x/exp/maps"
 	"golang.org/x/exp/slices"
 	"golang.org/x/text/currency"
@@ -96,7 +98,7 @@ func configureEnvironment(cmd *cobra.Command, conf config) (err error) {
 
 	// setup javascript VMs
 	if err == nil {
-		err = configureJavascript(conf.Javascript)
+		err = configureVMs(conf.VMs, conf.Javascript)
 	}
 
 	// setup EEBus server
@@ -157,12 +159,31 @@ func configureMQTT(conf mqttConfig) error {
 }
 
 // setup javascript
-func configureJavascript(conf []javascriptConfig) error {
+func configureVMs(conf []vmConfig, conf2 []javascriptConfig) error {
 	for _, cc := range conf {
+		var err error
+
+		// TODO
+		interp.New(interp.Options{})
+
+		switch cc.Type {
+		case "javascript":
+			_, err = javascript.RegisteredVM(cc.Name, cc.Script)
+		case "golang":
+			_, err = golang.RegisteredVM(cc.Name, cc.Script)
+		}
+
+		if err != nil {
+			return fmt.Errorf("failed configuring %s: %w", cc.Type, err)
+		}
+	}
+
+	for _, cc := range conf2 {
 		if _, err := javascript.RegisteredVM(cc.VM, cc.Script); err != nil {
 			return fmt.Errorf("failed configuring javascript: %w", err)
 		}
 	}
+
 	return nil
 }
 
