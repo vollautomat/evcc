@@ -1,0 +1,27 @@
+product:
+  brand: Watt Analytics
+  description: iWattController
+  group: Generische Unterstützung
+render:
+  - usage: grid
+    default: |
+      type: template
+      template: wattanalytics-controller
+      usage: grid      
+
+      # Modbus TCP
+      modbus: tcpip
+      id: 1
+      host: 192.0.2.2 # Hostname
+      port: 502 # Port
+    advanced: |
+      type: template
+      template: wattanalytics-controller
+      usage: grid      
+
+      # Modbus TCP
+      modbus: tcpip
+      id: 1
+      host: 192.0.2.2 # Hostname
+      port: 502 # Port
+      integer: true # Einstellung Float/Integer überprüfen # Optional
