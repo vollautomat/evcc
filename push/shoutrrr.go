@@ -38,6 +38,8 @@ func NewShoutrrrFromConfig(other map[string]interface{}) (Messenger, error) {
 		app: app,
 	}
 
+	m.log.WARN.Println("ntfy is deprecated, use shoutrrr instead")
+
 	return m, nil
 }
 
