@@ -3,6 +3,7 @@ package cmd
 import (
 	"errors"
 	"fmt"
+	"os"
 	"strconv"
 	"strings"
 	"time"
@@ -27,6 +28,8 @@ import (
 	"github.com/evcc-io/evcc/util/pipe"
 	"github.com/evcc-io/evcc/util/request"
 	"github.com/evcc-io/evcc/util/sponsor"
+	"github.com/fatih/structs"
+	"github.com/jeremywohl/flatten"
 	"github.com/libp2p/zeroconf/v2"
 	"github.com/spf13/cobra"
 	"github.com/spf13/viper"
@@ -60,10 +63,108 @@ func loadConfigFile(conf *config) error {
 	return err
 }
 
-func configureEnvironment(cmd *cobra.Command, conf config) (err error) {
+// loadConfigFromDB loads all known config keys from database
+func loadConfigFromDB0(conf *config) error {
+	shadow := make(map[string]interface{})
+
+	flat, _ := flatten.Flatten(structs.Map(conf), "", flatten.DotStyle)
+	for _, key := range maps.Keys(flat) {
+		key = strings.ToLower(key)
+		println(key)
+
+		val, err := settings.String(key)
+		// if err != nil {
+		// 	if err == settings.ErrNotFound {
+		// 		continue
+		// 	}
+		// 	return err
+		// }
+		_ = err
+
+		root := shadow
+		segments := strings.Split(key, ".")
+		for i, segment := range segments {
+			fmt.Println(i, segment)
+
+			// abort on integer key
+			if _, err := strconv.Atoi(segment); err == nil {
+				break
+			}
+
+			if i == len(segments)-1 {
+				// root[segment] = val
+				_ = val
+			} else {
+				if root[segment] == nil {
+					root[segment] = make(map[string]interface{})
+				}
+				root = root[segment].(map[string]interface{})
+			}
+		}
+	}
+
+	fmt.Println(shadow)
+
+	return util.DecodeOther(shadow, conf)
+}
+
+// loadConfigFromDB loads all known config keys from database
+func loadConfigFromDB(conf *config) error {
+	shadow := make(map[string]interface{})
+
+	for key, mapp := range structs.Map(conf) {
+		// key = strings.ToLower(key)
+		println(key)
+		_ = mapp
+
+		val, err := settings.String(key)
+		// if err != nil {
+		// 	if err == settings.ErrNotFound {
+		// 		continue
+		// 	}
+		// 	return err
+		// }
+		_ = err
+
+		root := shadow
+		segments := strings.Split(key, ".")
+		for i, segment := range segments {
+			fmt.Println(i, segment)
+
+			// abort on integer key
+			if _, err := strconv.Atoi(segment); err == nil {
+				break
+			}
+
+			if i == len(segments)-1 {
+				// root[segment] = val
+				_ = val
+			} else {
+				if root[segment] == nil {
+					root[segment] = make(map[string]interface{})
+				}
+				root = root[segment].(map[string]interface{})
+			}
+		}
+	}
+
+	fmt.Println(shadow)
+	os.Exit(0)
+
+	return util.DecodeOther(shadow, conf)
+}
+
+func configureEnvironment(cmd *cobra.Command, conf *config) (err error) {
 	// full http request log
 	if cmd.Flags().Lookup(flagHeaders).Changed {
 		request.LogHeaders = true
+	}
+
+	// setup persistence
+	if err == nil && conf.Database.Dsn != "" {
+		if err = configureDatabase(conf.Database); err == nil {
+			err = loadConfigFromDB(conf)
+		}
 	}
 
 	// setup machine id
@@ -79,11 +180,6 @@ func configureEnvironment(cmd *cobra.Command, conf config) (err error) {
 	// setup translations
 	if err == nil {
 		err = locale.Init()
-	}
-
-	// setup persistence
-	if err == nil && conf.Database.Dsn != "" {
-		err = configureDatabase(conf.Database)
 	}
 
 	// setup mqtt client listener
