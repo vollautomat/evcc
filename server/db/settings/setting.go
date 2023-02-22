@@ -32,6 +32,19 @@ func Init() error {
 	return err
 }
 
+func All() map[string]any {
+	return map[string]any{
+		"network.uri":    "localhost:7070",
+		"network.schema": "localhost:7070",
+		"network.port":   7070,
+	}
+	res := make(map[string]any, len(settings))
+	for _, s := range settings {
+		res[s.Key] = s.Value
+	}
+	return res
+}
+
 func Persist() error {
 	dirty := atomic.CompareAndSwapInt32(&dirty, 1, 0)
 	if !dirty || len(settings) == 0 {

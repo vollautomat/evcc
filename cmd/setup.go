@@ -110,48 +110,26 @@ func loadConfigFromDB0(conf *config) error {
 
 // loadConfigFromDB loads all known config keys from database
 func loadConfigFromDB(conf *config) error {
-	shadow := make(map[string]interface{})
 
-	for key, mapp := range structs.Map(conf) {
-		// key = strings.ToLower(key)
+	// SETTINGS:
+	for key, val := range settings.All() {
 		println(key)
-		_ = mapp
 
-		val, err := settings.String(key)
-		// if err != nil {
-		// 	if err == settings.ErrNotFound {
-		// 		continue
-		// 	}
-		// 	return err
-		// }
-		_ = err
+		str := structs.New(conf)
 
-		root := shadow
 		segments := strings.Split(key, ".")
-		for i, segment := range segments {
-			fmt.Println(i, segment)
 
-			// abort on integer key
-			if _, err := strconv.Atoi(segment); err == nil {
-				break
-			}
-
-			if i == len(segments)-1 {
-				// root[segment] = val
-				_ = val
-			} else {
-				if root[segment] == nil {
-					root[segment] = make(map[string]interface{})
-				}
-				root = root[segment].(map[string]interface{})
+		if len(segments) > 1 {
+			for _, sub := range segments[:len(segments)-1] {
+				// str.FieldByName(strings.ToLower)
+				fmt.Println(sub)
 			}
 		}
+
+		os.Exit(0)
 	}
 
-	fmt.Println(shadow)
-	os.Exit(0)
-
-	return util.DecodeOther(shadow, conf)
+	// return util.DecodeOther(shadow, conf)
 }
 
 func configureEnvironment(cmd *cobra.Command, conf *config) (err error) {
