@@ -37,7 +37,8 @@ var (
 	log     = util.NewLogger("main")
 	cfgFile string
 
-	ignoreMqtt = []string{"auth", "releaseNotes"} // excessive size may crash certain brokers
+	ignoreErrors = []string{"warn", "error"}        // don't add to cache
+	ignoreMqtt   = []string{"auth", "releaseNotes"} // excessive size may crash certain brokers
 )
 
 // rootCmd represents the base command when called without any subcommands
@@ -134,7 +135,7 @@ func runRoot(cmd *cobra.Command, args []string) {
 
 	// value cache
 	cache := util.NewCache()
-	go cache.Run(tee.Attach())
+	go cache.Run(pipe.NewDropper(ignoreErrors...).Pipe(tee.Attach()))
 
 	// create web server
 	socketHub := server.NewSocketHub()
@@ -159,7 +160,11 @@ func runRoot(cmd *cobra.Command, args []string) {
 
 	// setup events channel
 	eventChan := make(chan push.Event, 1)
-	go pushErrorEvents(eventChan, tee.Attach())
+	go pushErrorEvents(eventChan, valueChan, tee.Attach())
+
+	// valueChan <- util.Param{Key: "error", Val: "foo"}
+	// valueChan <- util.Param{Key: "error", Val: "foo"}
+	// valueChan <- util.Param{Key: "warn", Val: "bar"}
 
 	// capture log messages for UI
 	util.CaptureLogs(valueChan)

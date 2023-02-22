@@ -102,6 +102,8 @@ func (h *Hub) Run(events <-chan Event, valueChan chan<- util.Param) {
 			continue
 		}
 
+		fmt.Println(title, msg)
+		fmt.Println("--------------------------------------------------")
 		for _, sender := range h.sender {
 			if strings.TrimSpace(title)+strings.TrimSpace(msg) != "" {
 				go sender.Send(title, msg)

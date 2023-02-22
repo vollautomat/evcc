@@ -35,7 +35,7 @@ func parseLogLevels() {
 }
 
 // pushErrorEvents forwards error events as push messages
-func pushErrorEvents(events chan<- push.Event, valueChan <-chan util.Param) {
+func pushErrorEvents(events chan<- push.Event, msgChan chan<- util.Param, valueChan <-chan util.Param) {
 	cache := make(map[string]interface{})
 
 	for p := range valueChan {
@@ -52,6 +52,12 @@ func pushErrorEvents(events chan<- push.Event, valueChan <-chan util.Param) {
 		// simplify for users
 		if p.Key == "fatal" {
 			p.Key = "error"
+		}
+
+		msgChan <- util.Param{
+			Key:       "message", // re-key to avoid dropping from cache, see https://github.com/evcc-io/evcc/issues/6354
+			Val:       p.Val,
+			Loadpoint: p.Loadpoint,
 		}
 
 		events <- push.Event{
