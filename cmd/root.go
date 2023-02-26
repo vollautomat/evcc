@@ -13,7 +13,6 @@ import (
 	"time"
 
 	"github.com/evcc-io/evcc/core"
-	"github.com/evcc-io/evcc/push"
 	"github.com/evcc-io/evcc/server"
 	"github.com/evcc-io/evcc/server/modbus"
 	"github.com/evcc-io/evcc/server/updater"
@@ -156,7 +155,7 @@ func runRoot(cmd *cobra.Command, args []string) {
 	go socketHub.Run(pipe.NewDropper(ignoreEmpty).Pipe(tee.Attach()), cache)
 
 	// setup values channel
-	valueChan := make(chan util.Param)
+	valueChan := make(chan util.Param, 1)
 	go tee.Run(valueChan)
 
 	// capture log messages for UI
@@ -213,9 +212,18 @@ func runRoot(cmd *cobra.Command, args []string) {
 	}
 
 	// setup messaging
-	var pushChan chan push.Event
 	if err == nil {
-		pushChan, err = configureMessengers(conf.Messaging, valueChan, cache)
+		err = configureMessengers(conf.Messaging, valueChan, cache)
+		go pushErrorEvents(tee.Attach())
+	}
+
+	valueChan <- util.Param{
+		Key: "error",
+		Val: "blöd",
+	}
+	valueChan <- util.Param{
+		Key: "error",
+		Val: "blöd",
 	}
 
 	// run shutdown functions on stop
@@ -253,7 +261,7 @@ func runRoot(cmd *cobra.Command, args []string) {
 
 		// set channels
 		site.DumpConfig()
-		site.Prepare(valueChan, pushChan)
+		site.Prepare(valueChan)
 
 		// show and check version
 		valueChan <- util.Param{Key: "version", Val: server.FormattedVersion()}

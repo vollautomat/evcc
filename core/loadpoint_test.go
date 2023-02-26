@@ -35,23 +35,23 @@ func (n *Null) ChargingTime() (time.Duration, error) {
 }
 
 func createChannels(t *testing.T) (chan util.Param, chan push.Event, chan *Loadpoint) {
-	uiChan := make(chan util.Param)
-	pushChan := make(chan push.Event)
-	lpChan := make(chan *Loadpoint)
+	paramC := make(chan util.Param)
+	eventC := make(chan push.Event)
+	updateC := make(chan *Loadpoint)
 
 	log := false
 	go func() {
 		for {
 			select {
-			case v := <-uiChan:
+			case v := <-paramC:
 				if log {
 					t.Log(v)
 				}
-			case v := <-pushChan:
+			case v := <-eventC:
 				if log {
 					t.Log(v)
 				}
-			case v := <-lpChan:
+			case v := <-updateC:
 				if log {
 					t.Log(v)
 				}
@@ -59,13 +59,13 @@ func createChannels(t *testing.T) (chan util.Param, chan push.Event, chan *Loadp
 		}
 	}()
 
-	return uiChan, pushChan, lpChan
+	return paramC, eventC, updateC
 }
 
-func attachChannels(lp *Loadpoint, uiChan chan util.Param, pushChan chan push.Event, lpChan chan *Loadpoint) {
-	lp.uiChan = uiChan
-	lp.pushChan = pushChan
-	lp.lpChan = lpChan
+func attachChannels(lp *Loadpoint, paramC chan util.Param, eventC chan push.Event, updateC chan *Loadpoint) {
+	lp.paramC = paramC
+	lp.eventC = eventC
+	lp.updateC = updateC
 }
 
 func attachListeners(t *testing.T, lp *Loadpoint) {
@@ -76,8 +76,8 @@ func attachListeners(t *testing.T, lp *Loadpoint) {
 		charger.EXPECT().MaxCurrent(int64(lp.MinCurrent)).Return(nil)
 	}
 
-	uiChan, pushChan, lpChan := createChannels(t)
-	lp.Prepare(uiChan, pushChan, lpChan)
+	paramC, eventC, updateC := createChannels(t)
+	lp.Prepare(paramC, eventC, updateC)
 }
 
 func TestNew(t *testing.T) {
@@ -515,7 +515,7 @@ func TestSetModeAndSocAtDisconnect(t *testing.T) {
 func cacheExpecter(t *testing.T, lp *Loadpoint) (*util.Cache, func(key string, val interface{})) {
 	// attach cache for verifying values
 	paramC := make(chan util.Param)
-	lp.uiChan = paramC
+	lp.paramC = paramC
 
 	cache := util.NewCache()
 	go cache.Run(paramC)

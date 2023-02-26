@@ -13,6 +13,7 @@ import (
 type Event struct {
 	Loadpoint *int // optional loadpoint id
 	Event     string
+	data      map[string]any
 }
 
 // EventTemplateConfig is the push message configuration for an event
@@ -24,11 +25,10 @@ type EventTemplateConfig struct {
 type Hub struct {
 	definitions map[string]EventTemplateConfig
 	sender      []Messenger
-	cache       *util.Cache
 }
 
 // NewHub creates push hub with definitions and receiver
-func NewHub(cc map[string]EventTemplateConfig, cache *util.Cache) (*Hub, error) {
+func NewHub(cc map[string]EventTemplateConfig) (*Hub, error) {
 	// instantiate all event templates
 	for k, v := range cc {
 		if _, err := template.New("out").Funcs(template.FuncMap(sprig.FuncMap())).Parse(v.Title); err != nil {
@@ -41,7 +41,6 @@ func NewHub(cc map[string]EventTemplateConfig, cache *util.Cache) (*Hub, error) 
 
 	h := &Hub{
 		definitions: cc,
-		cache:       cache,
 	}
 
 	return h, nil
@@ -54,28 +53,19 @@ func (h *Hub) Add(sender Messenger) {
 
 // apply applies the event template to the content to produce the actual message
 func (h *Hub) apply(ev Event, tmpl string) (string, error) {
-	attr := make(map[string]interface{})
-
 	// loadpoint id
 	if ev.Loadpoint != nil {
-		attr["loadpoint"] = *ev.Loadpoint + 1
+		ev.data["loadpoint"] = *ev.Loadpoint + 1
 	}
 
-	// get all values from cache
-	for _, p := range h.cache.All() {
-		if p.Loadpoint == nil || ev.Loadpoint == p.Loadpoint {
-			attr[p.Key] = p.Val
-		}
-	}
-
-	return util.ReplaceFormatted(tmpl, attr)
+	return util.ReplaceFormatted(tmpl, ev.data)
 }
 
 // Run is the Hub's main publishing loop
-func (h *Hub) Run(events <-chan Event, valueChan chan util.Param) {
+func (h *Hub) Run(eventC <-chan Event) {
 	log := util.NewLogger("push")
 
-	for ev := range events {
+	for ev := range eventC {
 		if len(h.sender) == 0 {
 			continue
 		}
@@ -84,11 +74,6 @@ func (h *Hub) Run(events <-chan Event, valueChan chan util.Param) {
 		if !ok {
 			continue
 		}
-
-		// let cache catch up, refs https://github.com/evcc-io/evcc/pull/445
-		flushC := util.Flusher()
-		valueChan <- util.Param{Val: flushC}
-		<-flushC
 
 		title, err := h.apply(ev, definition.Title)
 		if err != nil {
@@ -103,7 +88,7 @@ func (h *Hub) Run(events <-chan Event, valueChan chan util.Param) {
 		}
 
 		for _, sender := range h.sender {
-			if strings.TrimSpace(msg) != "" {
+			if strings.TrimSpace(title)+strings.TrimSpace(msg) != "" {
 				go sender.Send(title, msg)
 			} else {
 				log.DEBUG.Printf("did not send empty message template for %s: %v", ev.Event, err)

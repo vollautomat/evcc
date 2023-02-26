@@ -44,8 +44,8 @@ type batteryMeasurement struct {
 
 // Site is the main configuration container. A site can host multiple loadpoints.
 type Site struct {
-	uiChan       chan<- util.Param // client push messages
-	lpUpdateChan chan *Loadpoint
+	paramC  chan<- util.Param // client push messages
+	updateC chan *Loadpoint
 
 	*Health
 
@@ -300,11 +300,11 @@ func (site *Site) DumpConfig() {
 // publish sends values to UI and databases
 func (site *Site) publish(key string, val interface{}) {
 	// test helper
-	if site.uiChan == nil {
+	if site.paramC == nil {
 		return
 	}
 
-	site.uiChan <- util.Param{
+	site.paramC <- util.Param{
 		Key: key,
 		Val: val,
 	}
@@ -668,31 +668,31 @@ func (site *Site) prepare() {
 }
 
 // Prepare attaches communication channels to site and loadpoints
-func (site *Site) Prepare(uiChan chan<- util.Param, pushChan chan<- push.Event) {
-	site.uiChan = uiChan
-	site.lpUpdateChan = make(chan *Loadpoint, 1) // 1 capacity to avoid deadlock
+func (site *Site) Prepare(paramC chan<- util.Param) {
+	site.paramC = paramC
+	site.updateC = make(chan *Loadpoint, 1) // 1 capacity to avoid deadlock
 
 	site.prepare()
 
 	for id, lp := range site.loadpoints {
-		lpUIChan := make(chan util.Param)
-		lpPushChan := make(chan push.Event)
+		paramC := make(chan util.Param)
+		eventC := make(chan push.Event)
 
 		// pipe messages through go func to add id
 		go func(id int) {
 			for {
 				select {
-				case param := <-lpUIChan:
+				case param := <-paramC:
 					param.Loadpoint = &id
-					uiChan <- param
-				case ev := <-lpPushChan:
+					paramC <- param
+				case ev := <-eventC:
 					ev.Loadpoint = &id
-					pushChan <- ev
+					push.Send(ev)
 				}
 			}
 		}(id)
 
-		lp.Prepare(lpUIChan, lpPushChan, site.lpUpdateChan)
+		lp.Prepare(paramC, eventC, site.updateC)
 	}
 }
 
@@ -720,7 +720,7 @@ func (site *Site) Run(stopC chan struct{}, interval time.Duration) {
 		select {
 		case <-ticker.C:
 			site.update(<-loadpointChan)
-		case lp := <-site.lpUpdateChan:
+		case lp := <-site.updateC:
 			site.update(lp)
 		case <-stopC:
 			return

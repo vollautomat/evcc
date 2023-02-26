@@ -91,12 +91,12 @@ type Task = func()
 // Loadpoint is responsible for controlling charge depending on
 // Soc needs and power availability.
 type Loadpoint struct {
-	clock    clock.Clock       // mockable time
-	bus      evbus.Bus         // event bus
-	pushChan chan<- push.Event // notifications
-	uiChan   chan<- util.Param // client push messages
-	lpChan   chan<- *Loadpoint // update requests
-	log      *util.Logger
+	clock   clock.Clock       // mockable time
+	bus     evbus.Bus         // event bus
+	eventC  chan<- push.Event // notifications
+	paramC  chan<- util.Param // client push messages
+	updateC chan<- *Loadpoint // update requests
+	log     *util.Logger
 
 	// exposed public configuration
 	sync.Mutex                // guard status
@@ -317,7 +317,7 @@ func (lp *Loadpoint) collectDefaults() {
 // requestUpdate requests site to update this loadpoint
 func (lp *Loadpoint) requestUpdate() {
 	select {
-	case lp.lpChan <- lp: // request loadpoint update
+	case lp.updateC <- lp: // request loadpoint update
 	default:
 	}
 }
@@ -371,13 +371,13 @@ func (lp *Loadpoint) configureChargerType(charger api.Charger) {
 
 // pushEvent sends push messages to clients
 func (lp *Loadpoint) pushEvent(event string) {
-	lp.pushChan <- push.Event{Event: event}
+	lp.eventC <- push.Event{Event: event}
 }
 
 // publish sends values to UI and databases
 func (lp *Loadpoint) publish(key string, val interface{}) {
-	if lp.uiChan != nil {
-		lp.uiChan <- util.Param{Key: key, Val: val}
+	if lp.paramC != nil {
+		lp.paramC <- util.Param{Key: key, Val: val}
 	}
 }
 
@@ -540,10 +540,10 @@ func (lp *Loadpoint) applyAction(actionCfg api.ActionConfig) {
 }
 
 // Prepare loadpoint configuration by adding missing helper elements
-func (lp *Loadpoint) Prepare(uiChan chan<- util.Param, pushChan chan<- push.Event, lpChan chan<- *Loadpoint) {
-	lp.uiChan = uiChan
-	lp.pushChan = pushChan
-	lp.lpChan = lpChan
+func (lp *Loadpoint) Prepare(paramC chan<- util.Param, eventC chan<- push.Event, updateC chan<- *Loadpoint) {
+	lp.paramC = paramC
+	lp.eventC = eventC
+	lp.updateC = updateC
 
 	// event handlers
 	_ = lp.bus.Subscribe(evChargeStart, lp.evChargeStartHandler)
