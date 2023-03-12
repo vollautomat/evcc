@@ -3,9 +3,9 @@ package core
 const (
 	title = "title" // loadpoint title
 
-	phasesConfigured = "phasesConfigured" // configured phases (1/3, 0 for auto on 1p3p chargers, nil for plain chargers)
-	phasesEnabled    = "phasesEnabled"    // enabled phases (1/3)
-	phasesActive     = "phasesActive"     // active phases as used by vehicle (1/2/3)
+	phasesDynamic = "phasesDynamic" // dynamic phases configuration (1/3, 0 for auto on 1p3p chargers, nil for plain chargers)
+	phasesStatic  = "phasesStatic"  // static phases configuration (1/3, 0 for auto on 1p3p chargers)
+	phasesActive  = "phasesActive"  // active phases as used by vehicle (1/2/3)
 
 	chargerIcon = "chargerIcon" // charger icon for ui
 

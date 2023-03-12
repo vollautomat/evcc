@@ -15,9 +15,9 @@ func (lp *Loadpoint) setConfiguredPhases(phases int) {
 
 	// publish 1p3p capability and phase configuration
 	if _, ok := lp.charger.(api.PhaseSwitcher); ok {
-		lp.publish(phasesConfigured, lp.ConfiguredPhases)
+		lp.publish(phasesDynamic, lp.ConfiguredPhases)
 	} else {
-		lp.publish(phasesConfigured, nil)
+		lp.publish(phasesDynamic, nil)
 	}
 }
 

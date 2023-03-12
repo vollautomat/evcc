@@ -47,9 +47,9 @@ func TestInfluxTypes(t *testing.T) {
 	{
 		// nil value - https://github.com/evcc-io/evcc/issues/5950
 		w := &influxWriter{
-			t: t, p: []*write.Point{inf2.NewPoint("phasesConfigured", nil, map[string]any{"value": nil}, m.clock.Now())},
+			t: t, p: []*write.Point{inf2.NewPoint("phasesDynamic", nil, map[string]any{"value": nil}, m.clock.Now())},
 		}
-		m.writeComplexPoint(w, util.Param{Key: "phasesConfigured", Val: nil}, nil)
+		m.writeComplexPoint(w, util.Param{Key: "phasesDynamic", Val: nil}, nil)
 		w.finish()
 	}
 
