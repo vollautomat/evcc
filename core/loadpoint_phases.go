@@ -6,23 +6,25 @@ import (
 	"github.com/evcc-io/evcc/api"
 )
 
-// setConfiguredPhases sets the default phase configuration
-func (lp *Loadpoint) setConfiguredPhases(phases int) {
+// setDynamicPhases sets the desired dynamic phase configuration (0/1/3). It does not update the charger yet.
+// For non-1p3p chargers this is always identical to the physical configuration (see SetPhases api).
+func (lp *Loadpoint) setDynamicPhases(phases int) {
 	lp.Lock()
 	defer lp.Unlock()
 
-	lp.ConfiguredPhases = phases
+	lp.phasesDynamic = phases
 
 	// publish 1p3p capability and phase configuration
 	if _, ok := lp.charger.(api.PhaseSwitcher); ok {
-		lp.publish(phasesDynamic, lp.ConfiguredPhases)
+		lp.publish(phasesDynamic, lp.phasesDynamic)
 	} else {
 		lp.publish(phasesDynamic, nil)
 	}
 }
 
-// setPhases sets the number of enabled phases without modifying the charger
-func (lp *Loadpoint) setPhases(phases int) {
+// setPhysicalPhases sets the number of physically connected phases (1/3).
+// Either reflects api-configured or detected state. Called after modifying the 1p3p charger status.
+func (lp *Loadpoint) setPhysicalPhases(phases int) {
 	if lp.GetPhases() != phases {
 		lp.Lock()
 		lp.phases = phases
@@ -102,7 +104,7 @@ func (lp *Loadpoint) maxActivePhases() int {
 
 	// if 1p3p supported then assume configured limit or 3p
 	if _, ok := lp.charger.(api.PhaseSwitcher); ok {
-		physical = lp.ConfiguredPhases
+		physical = lp.phasesDynamic
 	}
 
 	return min(expect(vehicle), expect(physical), expect(measured))

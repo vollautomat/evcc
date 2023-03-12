@@ -104,7 +104,7 @@ type Loadpoint struct {
 
 	Title_            string   `mapstructure:"title"`    // UI title
 	Priority_         int      `mapstructure:"priority"` // Priority
-	ConfiguredPhases  int      `mapstructure:"phases"`   // Charger configured phase mode 0/1/3
+	Phases_           int      `mapstructure:"phases"`   // Charger configured phase mode 0/1/3
 	ChargerRef        string   `mapstructure:"charger"`  // Charger reference
 	VehicleRef        string   `mapstructure:"vehicle"`  // Vehicle reference
 	VehiclesRef_      []string `mapstructure:"vehicles"` // TODO deprecated
@@ -120,7 +120,8 @@ type Loadpoint struct {
 	GuardDuration time.Duration // charger enable/disable minimum holding time
 
 	enabled                  bool      // Charger enabled state
-	phases                   int       // Charger enabled phases, guarded by mutex
+	phases                   int       // Charger physical phases
+	phasesDynamic            int       // Charger desired phases (1p3p)
 	measuredPhases           int       // Charger physically measured phases
 	chargeCurrent            float64   // Charger current limit
 	guardUpdated             time.Time // Charger enabled/disabled timestamp
@@ -251,13 +252,12 @@ func NewLoadpointFromConfig(log *util.Logger, cp configProvider, other map[strin
 	// - simple charger starts with phases config if specified or 3p
 	// - switchable charger starts at 0p since we don't know the current setting
 	if _, ok := lp.charger.(api.PhaseSwitcher); !ok {
-		if lp.ConfiguredPhases == 0 {
-			lp.ConfiguredPhases = 3
+		if lp.Phases_ == 0 {
+			lp.Phases_ = 3
 			lp.log.WARN.Println("phases not configured, assuming 3p")
 		}
-		lp.phases = lp.ConfiguredPhases
-	} else if lp.ConfiguredPhases != 0 {
-		lp.log.WARN.Printf("locking phase config to %dp for switchable charger", lp.ConfiguredPhases)
+	} else if lp.Phases_ != 0 {
+		lp.log.WARN.Printf("locking phase config to %dp for switchable charger", lp.Phases_)
 	}
 
 	// validate thresholds
@@ -557,7 +557,7 @@ func (lp *Loadpoint) Prepare(uiChan chan<- util.Param, pushChan chan<- push.Even
 	lp.publish(minCurrent, lp.MinCurrent)
 	lp.publish(maxCurrent, lp.MaxCurrent)
 
-	lp.setConfiguredPhases(lp.ConfiguredPhases)
+	lp.setDynamicPhases(lp.Phases_)
 	lp.publish(phasesStatic, lp.phases)
 	lp.publish(phasesActive, lp.activePhases())
 	lp.publishTimer(phaseTimer, 0, timerInactive)
@@ -911,13 +911,13 @@ func (lp *Loadpoint) resetPhaseTimer() {
 // scalePhasesRequired validates if fixed phase configuration matches enabled phases
 func (lp *Loadpoint) scalePhasesRequired() bool {
 	_, ok := lp.charger.(api.PhaseSwitcher)
-	return ok && lp.ConfiguredPhases != 0 && lp.ConfiguredPhases != lp.GetPhases()
+	return ok && lp.phasesDynamic != 0 && lp.phasesDynamic != lp.GetPhases()
 }
 
 // scalePhasesIfAvailable scales if api.PhaseSwitcher is available
 func (lp *Loadpoint) scalePhasesIfAvailable(phases int) error {
-	if lp.ConfiguredPhases != 0 {
-		phases = lp.ConfiguredPhases
+	if lp.phasesDynamic != 0 {
+		phases = lp.phasesDynamic
 	}
 
 	if _, ok := lp.charger.(api.PhaseSwitcher); ok {
@@ -947,7 +947,7 @@ func (lp *Loadpoint) scalePhases(phases int) error {
 		}
 
 		// update setting and reset timer
-		lp.setPhases(phases)
+		lp.setPhysicalPhases(phases)
 
 		// allow pv mode to re-enable charger right away
 		lp.elapsePVTimer()
@@ -982,7 +982,7 @@ func (lp *Loadpoint) pvScalePhases(availablePower, minCurrent, maxCurrent float6
 	activePhases := lp.activePhases()
 
 	// scale down phases
-	if targetCurrent := powerToCurrent(availablePower, activePhases); targetCurrent < minCurrent && activePhases > 1 && lp.ConfiguredPhases < 3 {
+	if targetCurrent := powerToCurrent(availablePower, activePhases); targetCurrent < minCurrent && activePhases > 1 && lp.phasesDynamic < 3 {
 		lp.log.DEBUG.Printf("available power %.0fW < %.0fW min %dp threshold", availablePower, float64(activePhases)*Voltage*minCurrent, activePhases)
 
 		if lp.phaseTimer.IsZero() {
@@ -1251,21 +1251,25 @@ func (lp *Loadpoint) updateChargeVoltages() {
 	lp.publish("chargeVoltages", chargeVoltages)
 
 	// Quine-McCluskey for (¬L1∧L2∧¬L3) ∨ (L1∧L2∧¬L3) ∨ (¬L1∧¬L2∧L3) ∨ (L1∧¬L2∧L3) ∨ (¬L1∧L2∧L3) -> ¬L1 ∧ L3 ∨ L2 ∧ ¬L3 ∨ ¬L2 ∧ L3
-	if !(u1 > minActiveVoltage) && (u3 > minActiveVoltage) || (u2 > minActiveVoltage) && !(u3 > minActiveVoltage) || !(u2 > minActiveVoltage) && (u3 > minActiveVoltage) {
+	if !(u1 > minActiveVoltage) && (u3 > minActiveVoltage) ||
+		(u2 > minActiveVoltage) && !(u3 > minActiveVoltage) ||
+		!(u2 > minActiveVoltage) && (u3 > minActiveVoltage) {
 		lp.log.WARN.Printf("invalid phase wiring between charge meter and charger")
 	}
 
-	var phases int
-	if (u1 > minActiveVoltage) || (u2 > minActiveVoltage) || (u3 > minActiveVoltage) {
-		phases = 3
-	}
-	if (u1 > minActiveVoltage) && (u2 < minActiveVoltage) && (u3 < minActiveVoltage) {
-		phases = 1
-	}
+	if u1 > minActiveVoltage {
+		var phases int
 
-	if phases >= 1 {
-		lp.log.DEBUG.Printf("detected connected phases: %dp", phases)
-		lp.setPhases(phases)
+		if u2 < minActiveVoltage && u3 < minActiveVoltage {
+			phases = 1
+		} else if u2 > minActiveVoltage || u3 > minActiveVoltage {
+			phases = 3
+		}
+
+		if phases != 0 {
+			lp.log.DEBUG.Printf("detected connected phases: %dp", phases)
+			lp.setPhysicalPhases(phases)
+		}
 	}
 }
 
@@ -1484,8 +1488,8 @@ func (lp *Loadpoint) Update(sitePower float64, batteryBuffered bool) {
 		err = lp.setLimit(0, false)
 
 	case lp.scalePhasesRequired():
-		if err = lp.scalePhases(lp.ConfiguredPhases); err == nil {
-			lp.log.DEBUG.Printf("switched phases: %dp", lp.ConfiguredPhases)
+		if err = lp.scalePhases(lp.phasesDynamic); err == nil {
+			lp.log.DEBUG.Printf("switched phases: %dp", lp.phasesDynamic)
 		}
 
 	case lp.targetEnergyReached():

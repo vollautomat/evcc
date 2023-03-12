@@ -183,11 +183,11 @@ func (lp *Loadpoint) SetPhases(phases int) error {
 
 	// set new default
 	lp.log.DEBUG.Println("set phases:", phases)
-	lp.setConfiguredPhases(phases)
+	lp.setDynamicPhases(phases)
 
 	// apply immediately if not 1p3p
 	if _, ok := lp.charger.(api.PhaseSwitcher); !ok {
-		lp.setPhases(phases)
+		lp.setPhysicalPhases(phases)
 	}
 
 	lp.requestUpdate()
