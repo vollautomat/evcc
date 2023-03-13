@@ -92,17 +92,21 @@ func (cp *CP) Heartbeat(request *core.HeartbeatRequest) (*core.HeartbeatConfirma
 }
 
 func (cp *CP) MeterValues(request *core.MeterValuesRequest) (*core.MeterValuesConfirmation, error) {
-	if request != nil && request.ConnectorId == cp.connector {
+	if request != nil {
 		cp.mu.Lock()
 		defer cp.mu.Unlock()
 
+		cm := cp.measurements[request.ConnectorId]
+
 		for _, meterValue := range request.MeterValue {
 			// ignore old meter value requests
-			if meterValue.Timestamp.Time.After(cp.meterUpdated) {
-				for _, sample := range meterValue.SampledValue {
-					cp.measurements[getSampleKey(sample)] = sample
-					cp.meterUpdated = time.Now()
-				}
+			if meterValue.Timestamp.Time.Before(cm.updated) {
+				continue
+			}
+
+			for _, sample := range meterValue.SampledValue {
+				cm.data[getSampleKey(sample)] = sample
+				cm.updated = meterValue.Timestamp.Time
 			}
 		}
 	}
@@ -118,6 +122,7 @@ func getSampleKey(s types.SampledValue) string {
 	return string(s.Measurand)
 }
 
+// TODO connector
 func (cp *CP) StartTransaction(request *core.StartTransactionRequest) (*core.StartTransactionConfirmation, error) {
 	if request == nil || request.ConnectorId != cp.connector {
 		return new(core.StartTransactionConfirmation), nil

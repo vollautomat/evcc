@@ -113,9 +113,13 @@ func NewOCPP(id string, connector int, idtag string, meterValues string, meterIn
 	}
 	log := util.NewLogger(unit)
 
-	cp := ocpp.NewChargePoint(log, id, connector, timeout)
-	if err := ocpp.Instance().Register(id, cp); err != nil {
-		return nil, err
+	// get charge point- may already exist in case of multiple connectors
+	cp, err := ocpp.Instance().GetChargePoint(id)
+	if err != nil {
+		cp = ocpp.NewChargePoint(log, id, timeout)
+		if err := ocpp.Instance().Register(id, cp); err != nil {
+			return nil, err
+		}
 	}
 
 	c := &OCPP{
@@ -407,17 +411,17 @@ func (c *OCPP) MaxCurrentMillis(current float64) error {
 
 // CurrentPower implements the api.Meter interface
 func (c *OCPP) currentPower() (float64, error) {
-	return c.cp.CurrentPower()
+	return c.cp.CurrentPower(c.connector)
 }
 
 // TotalEnergy implements the api.MeterTotal interface
 func (c *OCPP) totalEnergy() (float64, error) {
-	return c.cp.TotalEnergy()
+	return c.cp.TotalEnergy(c.connector)
 }
 
 // Currents implements the api.PhaseCurrents interface
 func (c *OCPP) currents() (float64, float64, float64, error) {
-	return c.cp.Currents()
+	return c.cp.Currents(c.connector)
 }
 
 // Phases1p3p implements the api.PhaseSwitcher interface

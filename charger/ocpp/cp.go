@@ -14,6 +14,9 @@ import (
 )
 
 const (
+	// maximum number of connectors per charge point
+	maxConnectors = 8
+
 	// Core profile keys
 	KeyNumberOfConnectors = "NumberOfConnectors"
 
@@ -40,31 +43,41 @@ type CP struct {
 	log  *util.Logger
 	once sync.Once
 
-	id        string
-	connector int
+	id string
 
 	connectC, statusC chan struct{}
 	updated           time.Time
 	status            *core.StatusNotificationRequest
 
 	timeout      time.Duration
-	meterUpdated time.Time
-	measurements map[string]types.SampledValue
+	measurements []*measurement
 
 	txnCount int // change initial value to the last known global transaction. Needs persistence
 	txnId    int
 }
 
-func NewChargePoint(log *util.Logger, id string, connector int, timeout time.Duration) *CP {
-	return &CP{
+type measurement struct {
+	updated time.Time
+	data    map[string]types.SampledValue
+}
+
+func NewChargePoint(log *util.Logger, id string, timeout time.Duration) *CP {
+	cp := CP{
 		log:          log,
 		id:           id,
-		connector:    connector,
 		connectC:     make(chan struct{}),
 		statusC:      make(chan struct{}),
-		measurements: make(map[string]types.SampledValue),
+		measurements: make([]*measurement, maxConnectors),
 		timeout:      timeout,
 	}
+
+	for i := range cp.measurements {
+		cp.measurements[i] = &measurement{
+			data: make(map[string]types.SampledValue),
+		}
+	}
+
+	return &cp
 }
 
 func (cp *CP) ID() string {
@@ -142,7 +155,7 @@ func (cp *CP) TransactionID() int {
 	return cp.txnId
 }
 
-func (cp *CP) Status() (api.ChargeStatus, error) {
+func (cp *CP) Status(connector int) (api.ChargeStatus, error) {
 	cp.mu.Lock()
 	defer cp.mu.Unlock()
 
@@ -178,17 +191,17 @@ func (cp *CP) Status() (api.ChargeStatus, error) {
 	return res, nil
 }
 
-var _ api.Meter = (*CP)(nil)
-
-func (cp *CP) CurrentPower() (float64, error) {
+func (cp *CP) CurrentPower(connector int) (float64, error) {
 	cp.mu.Lock()
 	defer cp.mu.Unlock()
 
-	if cp.timeout > 0 && time.Since(cp.meterUpdated) > cp.timeout {
+	cm := cp.measurements[connector]
+
+	if cp.timeout > 0 && time.Since(cm.updated) > cp.timeout {
 		return 0, api.ErrNotAvailable
 	}
 
-	if m, ok := cp.measurements[string(types.MeasurandPowerActiveImport)]; ok {
+	if m, ok := cm.data[string(types.MeasurandPowerActiveImport)]; ok {
 		f, err := strconv.ParseFloat(m.Value, 64)
 		return scale(f, m.Unit), err
 	}
@@ -196,17 +209,17 @@ func (cp *CP) CurrentPower() (float64, error) {
 	return 0, api.ErrNotAvailable
 }
 
-var _ api.MeterEnergy = (*CP)(nil)
-
-func (cp *CP) TotalEnergy() (float64, error) {
+func (cp *CP) TotalEnergy(connector int) (float64, error) {
 	cp.mu.Lock()
 	defer cp.mu.Unlock()
 
-	if cp.timeout > 0 && time.Since(cp.meterUpdated) > cp.timeout {
+	cm := cp.measurements[connector]
+
+	if cp.timeout > 0 && time.Since(cm.updated) > cp.timeout {
 		return 0, api.ErrNotAvailable
 	}
 
-	if m, ok := cp.measurements[string(types.MeasurandEnergyActiveImportRegister)]; ok {
+	if m, ok := cm.data[string(types.MeasurandEnergyActiveImportRegister)]; ok {
 		f, err := strconv.ParseFloat(m.Value, 64)
 		return scale(f, m.Unit) / 1e3, err
 	}
@@ -229,20 +242,20 @@ func getKeyCurrentPhase(phase int) string {
 	return string(types.MeasurandCurrentImport) + "@L" + strconv.Itoa(phase)
 }
 
-var _ api.PhaseCurrents = (*CP)(nil)
-
-func (cp *CP) Currents() (float64, float64, float64, error) {
+func (cp *CP) Currents(connector int) (float64, float64, float64, error) {
 	cp.mu.Lock()
 	defer cp.mu.Unlock()
 
-	if cp.timeout > 0 && time.Since(cp.meterUpdated) > cp.timeout {
+	cm := cp.measurements[connector]
+
+	if cp.timeout > 0 && time.Since(cm.updated) > cp.timeout {
 		return 0, 0, 0, api.ErrNotAvailable
 	}
 
 	currents := make([]float64, 0, 3)
 
 	for phase := 1; phase <= 3; phase++ {
-		m, ok := cp.measurements[getKeyCurrentPhase(phase)]
+		m, ok := cm.data[getKeyCurrentPhase(phase)]
 		if !ok {
 			return 0, 0, 0, api.ErrNotAvailable
 		}
