@@ -27,8 +27,9 @@ type Warp2 struct {
 	meterDetailsG func() (string, error)
 	chargeG       func() (string, error)
 	userconfigG   func() (string, error)
-	phasesReadyG  func() (string, error)
 	maxcurrentS   func(int64) error
+	emLowLevelG   func() (string, error)
+	emStateG      func() (string, error)
 	phasesS       func(int) error
 	current       int64
 }
@@ -126,10 +127,15 @@ func NewWarp2(mqttconf mqtt.Config, topic string, timeout time.Duration) (*Warp2
 		fmt.Sprintf("%s/energy_manager/low_level_state", topic), timeout,
 	).StringGetter())
 
-	// em low level state
-	emtopic := fmt.Sprintf("%s/energy_manager/low_level_state", topic)
-	g := provider.NewMqtt(log, client, emtopic, 0).StringGetter()
-	wb.phasesReadyG = emto.StringGetter(g)
+	// em getters
+	wb.emLowLevelG = emto.StringGetter(
+		provider.NewMqtt(log, client,
+			fmt.Sprintf("%s/energy_manager/low_level_state", topic),
+			0).StringGetter())
+	wb.emStateG = emto.StringGetter(
+		provider.NewMqtt(log, client,
+			fmt.Sprintf("%s/energy_manager/state", topic),
+			0).StringGetter())
 
 	return wb, nil
 }
@@ -273,9 +279,23 @@ func (wb *Warp2) identify() (string, error) {
 
 // phases1p3p implements the api.PhaseSwitcher interface
 func (wb *Warp2) phases1p3p(phases int) error {
+	{
+		// check if phases already switched
+		var res v2.EnergyManagerState
+
+		s, err := wb.emLowLevelG()
+		if err == nil {
+			err = json.Unmarshal([]byte(s), &res)
+		}
+
+		if err == nil && res.PhasesSwitched == phases {
+			return nil
+		}
+	}
+
 	var res v2.EnergyManagerLowLevelState
 
-	s, err := wb.phasesReadyG()
+	s, err := wb.emLowLevelG()
 	if err == nil {
 		err = json.Unmarshal([]byte(s), &res)
 	}

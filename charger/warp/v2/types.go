@@ -84,3 +84,7 @@ type LastNfcTag struct {
 type EnergyManagerLowLevelState struct {
 	PhaseStateChangeDelay int `json:"phase_state_change_delay"`
 }
+
+type EnergyManagerState struct {
+	PhasesSwitched int `json:"phases_switched"`
+}
