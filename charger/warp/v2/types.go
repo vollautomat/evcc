@@ -80,3 +80,7 @@ type LastNfcTag struct {
 	Type   int    `json:"tag_type"`
 	ID     string `json:"tag_id"`
 }
+
+type EnergyManagerLowLevelState struct {
+	PhaseStateChangeDelay int `json:"phase_state_change_delay"`
+}

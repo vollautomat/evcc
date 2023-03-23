@@ -18,8 +18,8 @@ import (
 // Warp2 is the Warp charger v2 firmware implementation
 type Warp2 struct {
 	log           *util.Logger
-	root          string
 	client        *mqtt.Client
+	root          string
 	features      []string
 	maxcurrentG   func() (string, error)
 	statusG       func() (string, error)
@@ -27,7 +27,9 @@ type Warp2 struct {
 	meterDetailsG func() (string, error)
 	chargeG       func() (string, error)
 	userconfigG   func() (string, error)
+	phasesReadyG  func() (string, error)
 	maxcurrentS   func(int64) error
+	phasesS       func(int) error
 	current       int64
 }
 
@@ -35,7 +37,7 @@ func init() {
 	registry.Add("warp-fw2", NewWarp2FromConfig)
 }
 
-//go:generate go run ../cmd/tools/decorate.go -f decorateWarp2 -b *Warp2 -r api.Charger -t "api.Meter,CurrentPower,func() (float64, error)" -t "api.MeterEnergy,TotalEnergy,func() (float64, error)" -t "api.PhaseCurrents,Currents,func() (float64, float64, float64, error)" -t "api.Identifier,Identify,func() (string, error)"
+//go:generate go run ../cmd/tools/decorate.go -f decorateWarp2 -b *Warp2 -r api.Charger -t "api.Meter,CurrentPower,func() (float64, error)" -t "api.MeterEnergy,TotalEnergy,func() (float64, error)" -t "api.PhaseCurrents,Currents,func() (float64, float64, float64, error)" -t "api.Identifier,Identify,func() (string, error)" -t "api.PhaseSwitcher,Phases1p3p,func(int) error"
 
 // NewWarpFromConfig creates a new configurable charger
 func NewWarp2FromConfig(other map[string]interface{}) (api.Charger, error) {
@@ -73,7 +75,12 @@ func NewWarp2FromConfig(other map[string]interface{}) (api.Charger, error) {
 		identity = wb.identify
 	}
 
-	return decorateWarp2(wb, currentPower, totalEnergy, currents, identity), err
+	var phases1p3p func(int) error
+	if wb.hasFeature(v2.FeatureNfc) && false {
+		phases1p3p = wb.phases1p3p
+	}
+
+	return decorateWarp2(wb, currentPower, totalEnergy, currents, identity, phases1p3p), err
 }
 
 // NewWarp2 creates a new configurable charger
@@ -113,6 +120,16 @@ func NewWarp2(mqttconf mqtt.Config, topic string, timeout time.Duration) (*Warp2
 		fmt.Sprintf("%s/evse/external_current_update", topic), 0).
 		WithPayload(`{ "current": ${maxcurrent} }`).
 		IntSetter("maxcurrent")
+
+	// em timeout handler
+	emto := provider.NewTimeoutHandler(provider.NewMqtt(log, client,
+		fmt.Sprintf("%s/energy_manager/low_level_state", topic), timeout,
+	).StringGetter())
+
+	// em low level state
+	emtopic := fmt.Sprintf("%s/energy_manager/low_level_state", topic)
+	g := provider.NewMqtt(log, client, emtopic, 0).StringGetter()
+	wb.phasesReadyG = emto.StringGetter(g)
 
 	return wb, nil
 }
@@ -252,4 +269,23 @@ func (wb *Warp2) identify() (string, error) {
 	}
 
 	return res.AuthorizationInfo.TagId, err
+}
+
+// phases1p3p implements the api.PhaseSwitcher interface
+func (wb *Warp2) phases1p3p(phases int) error {
+	var res v2.EnergyManagerLowLevelState
+
+	s, err := wb.phasesReadyG()
+	if err == nil {
+		err = json.Unmarshal([]byte(s), &res)
+	}
+	if err != nil {
+		return err
+	}
+
+	if res.PhaseStateChangeDelay > 0 {
+		return fmt.Errorf("waiting for energy manager: %ds", res.PhaseStateChangeDelay)
+	}
+
+	return wb.phasesS(phases)
 }
