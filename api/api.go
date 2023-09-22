@@ -9,7 +9,9 @@ import (
 	"time"
 )
 
-//go:generate mockgen -package mock -destination ../mock/mock_api.go github.com/evcc-io/evcc/api Charger,ChargeState,PhaseSwitcher,Identifier,Meter,MeterEnergy,Vehicle,ChargeRater,Battery,Tariff
+//go:generate mockgen -package mock -destination ../mock/mock_api.go github.com/evcc-io/evcc/api ChargeState,Identifier,Vehicle,Battery,Tariff
+//go:generate mockgen -package mock -destination ../mock/mock_meter.go github.com/evcc-io/evcc/api Meter,MeterEnergy,ChargeRater
+//go:generate mockgen -package mock -destination ../mock/mock_charger.go github.com/evcc-io/evcc/api Charger,CurrentController,PowerController,PhaseSwitcher
 
 // ChargeMode is the charge operation mode. Valid values are off, now, minpv and pv
 type ChargeMode string
@@ -124,9 +126,20 @@ type ChargeState interface {
 	Status() (ChargeStatus, error)
 }
 
-// CurrentLimiter provides settings charging maximum charging current
+// CurrentLimiter limits maximum charging current
 type CurrentLimiter interface {
 	MaxCurrent(current int64) error
+}
+
+// TODO rename to CurrentLimiterEx/MaxCurrentFloat
+// ChargerEx provides milli-amp precision charger current control
+type ChargerEx interface {
+	MaxCurrentMillis(current float64) error
+}
+
+// PowerLimiter limits maximum charging power
+type PowerLimiter interface {
+	MaxPower(power float64) (float64, error)
 }
 
 // CurrentGetter provides getting charging maximum charging current for validation
@@ -139,12 +152,18 @@ type Charger interface {
 	ChargeState
 	Enabled() (bool, error)
 	Enable(enable bool) error
+}
+
+// CurrentController combines Charger with CurrentLimiter
+type CurrentController interface {
+	Charger
 	CurrentLimiter
 }
 
-// ChargerEx provides milli-amp precision charger current control
-type ChargerEx interface {
-	MaxCurrentMillis(current float64) error
+// PowerController combines Charger with PowerLimiter
+type PowerController interface {
+	Charger
+	PowerLimiter
 }
 
 // PhaseSwitcher provides 1p3p switching
