@@ -19,6 +19,9 @@ requirements:
   evcc: ["sponsorship"]
 params:
   - name: host
+  - name: port
+    default: 80
+    advanced: true
 render: |
   type: go-e
-  uri: http://{{ .host }}
+  uri: http://{{ .host }}{{ if ne .port "80" }}:{{ .port }}{{ end }}
