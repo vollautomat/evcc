@@ -2,24 +2,99 @@
 	<form @submit.prevent="setTargetTime">
 		<div class="mt-4">
 			<div class="form-group d-lg-flex align-items-baseline mb-2 justify-content-between">
-				<!-- eslint-disable vue/no-v-html -->
-				<label :for="`targetTimeLabel${id}`" class="mb-3 me-3">
-					<span v-if="socBasedCharging">
-						{{
-							$t("main.targetCharge.descriptionSoc", {
-								targetSoc,
-							})
-						}}
-					</span>
-					<span v-else>
-						{{
-							$t("main.targetCharge.descriptionEnergy", {
-								targetEnergy: targetEnergyFormatted,
-							})
-						}}
-					</span>
-				</label>
-				<!-- eslint-enable vue/no-v-html -->
+				<div v-if="targetTime" class="container px-0">
+					<div class="row my-3" :class="{ 'opacity-50': state === 'disabled' }">
+						<div class="col-3">
+							<input type="text" class="form-control mx-0" value="Mo." />
+						</div>
+						<div class="col-3">
+							<input type="text" class="form-control mx-0" value="10:45" />
+						</div>
+						<div class="col-3">
+							<input type="text" class="form-control mx-0" value="50%" />
+						</div>
+						<div class="col d-flex align-items-center justify-content-between">
+							<button
+								v-if="state === 'once'"
+								type="button"
+								class="btn btn-sm text-primary"
+								@click.prevent="state = 'repeat'"
+							>
+								<shopicon-regular-checkbox></shopicon-regular-checkbox>
+							</button>
+							<button
+								v-if="state === 'repeat'"
+								type="button"
+								class="btn btn-sm text-primary"
+								@click.prevent="state = 'disabled'"
+							>
+								<shopicon-regular-infinite></shopicon-regular-infinite>
+							</button>
+							<button
+								v-if="state === 'disabled'"
+								type="button"
+								class="btn btn-sm text-muted"
+								@click.prevent="state = 'once'"
+							>
+								<shopicon-regular-square></shopicon-regular-square>
+							</button>
+							<button type="button" class="btn btn-sm btn-link text-muted">
+								<shopicon-regular-trash></shopicon-regular-trash>
+							</button>
+						</div>
+					</div>
+					<div class="row my-3">
+						<div class="col-3">
+							<input type="text" class="form-control mx-0" value="Sa." />
+						</div>
+						<div class="col-3">
+							<input type="text" class="form-control mx-0" value="8:00" />
+						</div>
+						<div class="col-3">
+							<input type="text" class="form-control mx-0" value="75%" />
+						</div>
+						<div class="col d-flex align-items-center justify-content-between">
+							<button type="button" class="btn btn-sm text-primary">
+								<shopicon-regular-checkbox></shopicon-regular-checkbox>
+							</button>
+							<button type="button" class="btn btn-sm btn-link text-muted">
+								<shopicon-regular-trash></shopicon-regular-trash>
+							</button>
+						</div>
+					</div>
+					<div class="row my-3">
+						<div class="col-3">
+							<input type="text" class="form-control mx-0" value="Di.-Do." />
+						</div>
+						<div class="col-3">
+							<input type="text" class="form-control mx-0" value="6:00" />
+						</div>
+						<div class="col-3">
+							<input type="text" class="form-control mx-0" value="55%" />
+						</div>
+						<div class="col d-flex align-items-center justify-content-between">
+							<button type="button" class="btn btn-sm text-primary">
+								<shopicon-regular-infinite></shopicon-regular-infinite>
+							</button>
+							<button type="button" class="btn btn-sm btn-link text-muted">
+								<shopicon-regular-trash></shopicon-regular-trash>
+							</button>
+						</div>
+					</div>
+					<div class="d-flex justify-content-end">
+						<button class="btn btn-sm d-flex align-items-center">
+							<shopicon-regular-plus size="s"></shopicon-regular-plus>
+						</button>
+					</div>
+				</div>
+				<div v-else>
+					<p>
+						No charging target set. Set your departure and charge goals; evcc computes
+						the optimal charging schedule.
+					</p>
+					<button class="btn btn-outline-primary">Set charging target</button>
+				</div>
+				<!--
 				<div class="d-flex justify-content-between date-selection">
 					<select
 						:id="`targetTimeLabel${id}`"
@@ -40,7 +115,12 @@
 						data-testid="target-time"
 					/>
 				</div>
+				-->
 			</div>
+			<div v-if="targetTime">
+				<hr />
+				<h5>PREVIEW</h5>
+				<!--
 			<p class="mb-0">
 				<span v-if="timeInThePast" class="d-block text-danger mb-1">
 					{{ $t("main.targetCharge.targetIsInThePast") }}
@@ -63,32 +143,38 @@
 				</span>
 				&nbsp;
 			</p>
-			<TargetChargePlan v-if="targetChargePlanProps" v-bind="targetChargePlanProps" />
-			<div class="d-flex justify-content-between mt-3">
-				<button
-					type="button"
-					class="btn btn-outline-secondary"
-					:disabled="!targetTime"
-					@click="removeTargetTime"
-				>
-					{{ $t("main.targetCharge.remove") }}
-				</button>
-				<button type="submit" class="btn btn-primary" :disabled="timeInThePast">
-					<span v-if="targetTime">
-						{{ $t("main.targetCharge.update") }}
-					</span>
-					<span v-else>
-						{{ $t("main.targetCharge.activate") }}
-					</span>
-				</button>
+			-->
+				<TargetChargePlan v-if="targetChargePlanProps" v-bind="targetChargePlanProps" />
+				<!--
+				<div class="d-flex justify-content-between mt-3">
+					<button
+						type="button"
+						class="btn btn-outline-secondary"
+						:disabled="!targetTime"
+						@click="removeTargetTime"
+					>
+						{{ $t("main.targetCharge.remove") }}
+					</button>
+					<button type="submit" class="btn btn-primary" :disabled="timeInThePast">
+						<span v-if="targetTime">
+							{{ $t("main.targetCharge.update") }}
+						</span>
+						<span v-else>
+							{{ $t("main.targetCharge.activate") }}
+						</span>
+					</button>
+				</div>-->
 			</div>
 		</div>
 	</form>
 </template>
 
 <script>
-import "@h2d2/shopicons/es/filled/plus";
-import "@h2d2/shopicons/es/filled/edit";
+import "@h2d2/shopicons/es/regular/square";
+import "@h2d2/shopicons/es/regular/trash";
+import "@h2d2/shopicons/es/regular/infinite";
+import "@h2d2/shopicons/es/regular/checkbox";
+import "@h2d2/shopicons/es/regular/plus";
 import { CO2_TYPE } from "../units";
 import TargetChargePlan from "./TargetChargePlan.vue";
 import api from "../api";
@@ -124,6 +210,7 @@ export default {
 			tariff: {},
 			activeTab: "time",
 			loading: false,
+			state: "disabled",
 		};
 	},
 	computed: {
@@ -310,5 +397,16 @@ export default {
 }
 .time-selection {
 	flex-basis: 200px;
+}
+h5 {
+	position: relative;
+	display: inline-block;
+	background-color: white;
+	top: -25px;
+	left: calc(50% - 50px);
+	padding: 0 0.5rem;
+	font-weight: normal;
+	color: var(--bs-gray);
+	margin-bottom: -4rem;
 }
 </style>
