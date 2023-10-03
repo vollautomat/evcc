@@ -5,38 +5,92 @@
 				<div v-if="targetTime" class="container px-0">
 					<div class="row my-3" :class="{ 'opacity-50': state === 'disabled' }">
 						<div class="col-3">
-							<input type="text" class="form-control mx-0" value="Mo." />
+							<select class="form-select mx-0">
+								<option
+									v-for="opt in [
+										{ name: 'Mo.', value: 1 },
+										{ name: 'Di.', value: 2 },
+										{ name: 'Mi.', value: 3 },
+										{ name: 'Do.', value: 4 },
+										{ name: 'Fr.', value: 5 },
+										{ name: 'Sa.', value: 6 },
+										{ name: 'So.', value: 7 },
+									]"
+									:key="opt.value"
+									:value="opt.value"
+								>
+									{{ opt.name }}
+								</option>
+							</select>
 						</div>
 						<div class="col-3">
-							<input type="text" class="form-control mx-0" value="10:45" />
+							<input
+								v-model="selectedTime"
+								type="time"
+								class="form-control mx-0"
+								:step="60 * 5"
+								required
+							/>
 						</div>
 						<div class="col-3">
-							<input type="text" class="form-control mx-0" value="50%" />
+							<select class="form-select mx-0">
+								<option
+									v-for="opt in [
+										{ value: 5, name: '5 %' },
+										{ value: 10, name: '10 %' },
+										{ value: 15, name: '15 %' },
+										{ value: 20, name: '20 %' },
+										{ value: 25, name: '25 %' },
+										{ value: 30, name: '30 %' },
+										{ value: 35, name: '35 %' },
+										{ value: 40, name: '40 %' },
+										{ value: 45, name: '45 %' },
+										{ value: 50, name: '50 %' },
+										{ value: 55, name: '55 %' },
+										{ value: 60, name: '60 %' },
+										{ value: 65, name: '65 %' },
+										{ value: 70, name: '70 %' },
+										{ value: 75, name: '75 %' },
+										{ value: 80, name: '80 %' },
+										{ value: 85, name: '85 %' },
+										{ value: 90, name: '90 %' },
+										{ value: 95, name: '95 %' },
+										{ value: 100, name: '100 %' },
+									]"
+									:key="opt.value"
+									:value="opt.value"
+								>
+									{{ opt.name }}
+								</option>
+							</select>
 						</div>
 						<div class="col d-flex align-items-center justify-content-between">
 							<button
 								v-if="state === 'once'"
 								type="button"
-								class="btn btn-sm text-primary"
+								class="btn btn-sm text-primary d-flex align-items-baseline"
 								@click.prevent="state = 'repeat'"
 							>
 								<shopicon-regular-checkbox></shopicon-regular-checkbox>
+								<span class="ms-2 d-none d-lg-block">once</span>
 							</button>
 							<button
 								v-if="state === 'repeat'"
 								type="button"
-								class="btn btn-sm text-primary"
+								class="btn btn-sm text-primary d-flex align-items-baseline"
 								@click.prevent="state = 'disabled'"
 							>
 								<shopicon-regular-infinite></shopicon-regular-infinite>
+								<span class="ms-2 d-none d-lg-block">repeating</span>
 							</button>
 							<button
 								v-if="state === 'disabled'"
 								type="button"
-								class="btn btn-sm text-muted"
+								class="btn btn-sm text-muted d-flex align-items-baseline"
 								@click.prevent="state = 'once'"
 							>
 								<shopicon-regular-square></shopicon-regular-square>
+								<span class="ms-2 d-none d-lg-block">disabled</span>
 							</button>
 							<button type="button" class="btn btn-sm btn-link text-muted">
 								<shopicon-regular-trash></shopicon-regular-trash>
@@ -45,17 +99,21 @@
 					</div>
 					<div class="row my-3">
 						<div class="col-3">
-							<input type="text" class="form-control mx-0" value="Sa." />
+							<input type="text" class="form-select mx-0" value="Sa." />
 						</div>
 						<div class="col-3">
-							<input type="text" class="form-control mx-0" value="8:00" />
+							<input type="time" class="form-control mx-0" value="08:00" />
 						</div>
 						<div class="col-3">
-							<input type="text" class="form-control mx-0" value="75%" />
+							<input type="text" class="form-select mx-0" value="75%" />
 						</div>
 						<div class="col d-flex align-items-center justify-content-between">
-							<button type="button" class="btn btn-sm text-primary">
+							<button
+								type="button"
+								class="btn btn-sm text-primary d-flex align-items-baseline"
+							>
 								<shopicon-regular-checkbox></shopicon-regular-checkbox>
+								<span class="ms-2 d-none d-lg-block">once</span>
 							</button>
 							<button type="button" class="btn btn-sm btn-link text-muted">
 								<shopicon-regular-trash></shopicon-regular-trash>
@@ -64,17 +122,21 @@
 					</div>
 					<div class="row my-3">
 						<div class="col-3">
-							<input type="text" class="form-control mx-0" value="Di.-Do." />
+							<input type="text" class="form-select mx-0" value="Di.-Do." />
 						</div>
 						<div class="col-3">
-							<input type="text" class="form-control mx-0" value="6:00" />
+							<input type="time" class="form-control mx-0" value="06:45" />
 						</div>
 						<div class="col-3">
-							<input type="text" class="form-control mx-0" value="55%" />
+							<input type="text" class="form-select mx-0" value="55%" />
 						</div>
 						<div class="col d-flex align-items-center justify-content-between">
-							<button type="button" class="btn btn-sm text-primary">
+							<button
+								type="button"
+								class="btn btn-sm text-primary d-flex align-items-baseline"
+							>
 								<shopicon-regular-infinite></shopicon-regular-infinite>
+								<span class="ms-2 d-none d-lg-block">repeating</span>
 							</button>
 							<button type="button" class="btn btn-sm btn-link text-muted">
 								<shopicon-regular-trash></shopicon-regular-trash>

@@ -19,6 +19,9 @@
 				:class="progressColor"
 				:style="{ width: `${remainingSocWidth}%`, transition: 'none' }"
 			></div>
+			<div v-if="planActive" class="plan-limit" :style="{ left: `80%` }">
+				<shopicon-regular-clock class="icon"></shopicon-regular-clock>
+			</div>
 			<div
 				v-show="vehicleTargetSoc"
 				ref="vehicleTargetSoc"
@@ -27,7 +30,7 @@
 				title=" "
 				:class="{ 'vehicle-target-soc--active': vehicleTargetSocActive }"
 				:style="{ left: `${vehicleTargetSoc}%` }"
-			/>
+			></div>
 		</div>
 		<div class="target">
 			<input
@@ -51,6 +54,7 @@
 
 <script>
 import Tooltip from "bootstrap/js/dist/tooltip";
+import "@h2d2/shopicons/es/regular/clock";
 
 export default {
 	name: "VehicleSoc",
@@ -66,6 +70,7 @@ export default {
 		targetEnergy: Number,
 		chargedEnergy: Number,
 		socBasedCharging: Boolean,
+		planActive: Boolean,
 	},
 	emits: ["target-soc-drag", "target-soc-updated"],
 	data: function () {
@@ -271,5 +276,28 @@ export default {
 }
 .vehicle-target-soc--active {
 	background-color: var(--evcc-box);
+}
+
+.plan-limit {
+	position: absolute;
+	top: 0;
+	bottom: 0;
+	width: 20px;
+	transform: translateX(-8px);
+	background-color: var(--bs-primary);
+	background-clip: padding-box;
+	border-width: 0 8px;
+	border-style: solid;
+	border-color: transparent;
+	transition: background-color var(--evcc-transition-fast) linear;
+}
+
+.plan-limit .icon {
+	width: 1.5rem;
+	height: 1.5rem;
+	position: absolute;
+	color: var(--bs-primary);
+	bottom: -26px;
+	left: -10px;
 }
 </style>
