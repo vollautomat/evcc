@@ -42,11 +42,13 @@ const (
 	vestelRegSessionEnergy   = 1502
 	vestelRegFailsafeTimeout = 2002
 	vestelRegAlive           = 6000
-	//vestelRegChargepointState = 1000
+	// vestelRegChargepointState = 1000
 )
 
-var vestelRegCurrents = []uint16{1008, 1010, 1012} // non-continuous uint16 registers!
-var vestelRegVoltages = []uint16{1014, 1016, 1018} // non-continuous uint16 registers!
+var (
+	vestelRegCurrents = []uint16{1008, 1010, 1012} // non-continuous uint16 registers!
+	vestelRegVoltages = []uint16{1014, 1016, 1018} // non-continuous uint16 registers!
+)
 
 // Vestel is an api.Charger implementation for Vestel/Hymes wallboxes with Ethernet (SW modells).
 // It uses Modbus TCP to communicate with the wallbox at modbus client id 255.
@@ -93,13 +95,20 @@ func NewVestel(uri string, id uint8) (*Vestel, error) {
 		current: 6,
 	}
 
-	go wb.heartbeat()
+	// get failsafe timeout from charger
+	b, err := wb.conn.ReadHoldingRegisters(vestelRegFailsafeTimeout, 1)
+	if err != nil {
+		return nil, fmt.Errorf("failsafe timeout: %w", err)
+	}
+	if u := binary.BigEndian.Uint16(b); u > 0 {
+		go wb.heartbeat(time.Duration(u) * time.Second / 2)
+	}
 
 	return wb, nil
 }
 
-func (wb *Vestel) heartbeat() {
-	for range time.Tick(time.Second * 3) {
+func (wb *Vestel) heartbeat(timeout time.Duration) {
+	for range time.Tick(timeout) {
 		if _, err := wb.conn.WriteSingleRegister(vestelRegAlive, 1); err != nil {
 			wb.log.ERROR.Println("heartbeat:", err)
 		}
@@ -212,34 +221,34 @@ var _ api.PhaseCurrents = (*Vestel)(nil)
 
 // Currents implements the api.PhaseCurrents interface
 func (wb *Vestel) Currents() (float64, float64, float64, error) {
-	var currents []float64
-	for _, regCurrent := range vestelRegCurrents {
-		b, err := wb.conn.ReadInputRegisters(regCurrent, 1)
+	var res []float64
+	for _, reg := range vestelRegCurrents {
+		b, err := wb.conn.ReadInputRegisters(reg, 1)
 		if err != nil {
 			return 0, 0, 0, err
 		}
 
-		currents = append(currents, float64(binary.BigEndian.Uint16(b))/1e3)
+		res = append(res, float64(binary.BigEndian.Uint16(b))/1e3)
 	}
 
-	return currents[0], currents[1], currents[2], nil
+	return res[0], res[1], res[2], nil
 }
 
 var _ api.PhaseVoltages = (*Vestel)(nil)
 
 // Voltages implements the api.PhaseVoltages interface
 func (wb *Vestel) Voltages() (float64, float64, float64, error) {
-	var voltages []float64
-	for _, regVoltage := range vestelRegVoltages {
-		b, err := wb.conn.ReadInputRegisters(regVoltage, 1)
+	var res []float64
+	for _, reg := range vestelRegVoltages {
+		b, err := wb.conn.ReadInputRegisters(reg, 1)
 		if err != nil {
 			return 0, 0, 0, err
 		}
 
-		voltages = append(voltages, float64(binary.BigEndian.Uint16(b)))
+		res = append(res, float64(binary.BigEndian.Uint16(b)))
 	}
 
-	return voltages[0], voltages[1], voltages[2], nil
+	return res[0], res[1], res[2], nil
 }
 
 var _ api.Diagnosis = (*Vestel)(nil)
