@@ -2,19 +2,18 @@ package tariff
 
 import (
 	"fmt"
-	"sort"
 	"time"
 
 	"github.com/benbjohnson/clock"
 	"github.com/evcc-io/evcc/api"
-	"github.com/evcc-io/evcc/tariff/fixed"
+	"github.com/evcc-io/evcc/tariff/schedule"
 	"github.com/evcc-io/evcc/util"
 	"github.com/jinzhu/now"
 )
 
 type Fixed struct {
 	clock   clock.Clock
-	zones   fixed.Zones
+	zones   schedule.Zones
 	dynamic bool
 }
 
@@ -27,10 +26,7 @@ func init() {
 func NewFixedFromConfig(other map[string]interface{}) (api.Tariff, error) {
 	var cc struct {
 		Price float64
-		Zones []struct {
-			Price       float64
-			Days, Hours string
-		}
+		Zones schedule.Config
 	}
 
 	if err := util.DecodeOther(other, &cc); err != nil {
@@ -42,40 +38,15 @@ func NewFixedFromConfig(other map[string]interface{}) (api.Tariff, error) {
 		dynamic: len(cc.Zones) > 1,
 	}
 
-	for _, z := range cc.Zones {
-		days, err := fixed.ParseDays(z.Days)
-		if err != nil {
-			return nil, err
-		}
-
-		hours, err := fixed.ParseTimeRanges(z.Hours)
-		if err != nil && z.Hours != "" {
-			return nil, err
-		}
-
-		if len(hours) == 0 {
-			t.zones = append(t.zones, fixed.Zone{
-				Price: z.Price,
-				Days:  days,
-			})
-			continue
-		}
-
-		for _, h := range hours {
-			t.zones = append(t.zones, fixed.Zone{
-				Price: z.Price,
-				Days:  days,
-				Hours: h,
-			})
-		}
+	zones, err := schedule.FromConfig(cc.Zones)
+	if err != nil {
+		return nil, err
 	}
 
-	sort.Sort(t.zones)
-
 	// prepend catch-all zone
-	t.zones = append([]fixed.Zone{
+	t.zones = append([]schedule.Zone{
 		{Price: cc.Price}, // full week is implicit
-	}, t.zones...)
+	}, zones...)
 
 	return t, nil
 }
@@ -86,7 +57,7 @@ func (t *Fixed) Rates() (api.Rates, error) {
 
 	start := now.With(t.clock.Now().Local()).BeginningOfDay()
 	for i := 0; i < 7; i++ {
-		dow := fixed.Day((int(start.Weekday()) + i) % 7)
+		dow := schedule.Day((int(start.Weekday()) + i) % 7)
 
 		zones := t.zones.ForDay(dow)
 		if len(zones) == 0 {
@@ -99,7 +70,7 @@ func (t *Fixed) Rates() (api.Rates, error) {
 		for i, m := range markers {
 			ts := dayStart.Add(time.Minute * time.Duration(m.Minutes()))
 
-			var zone *fixed.Zone
+			var zone *schedule.Zone
 			for j := len(zones) - 1; j >= 0; j-- {
 				if zones[j].Hours.Contains(m) {
 					zone = &zones[j]

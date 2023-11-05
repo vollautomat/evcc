@@ -6,7 +6,7 @@ import (
 
 	"github.com/benbjohnson/clock"
 	"github.com/evcc-io/evcc/api"
-	"github.com/evcc-io/evcc/tariff/fixed"
+	"github.com/evcc-io/evcc/tariff/schedule"
 	"github.com/jinzhu/now"
 	"github.com/stretchr/testify/assert"
 )
@@ -14,7 +14,7 @@ import (
 func TestFixed(t *testing.T) {
 	tf := &Fixed{
 		clock: clock.NewMock(),
-		zones: []fixed.Zone{
+		zones: []schedule.Zone{
 			{Price: 0.3},
 		},
 	}
