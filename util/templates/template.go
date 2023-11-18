@@ -273,7 +273,9 @@ func (t *Template) RenderResult(renderMode string, other map[string]interface{})
 		return nil, values, err
 	}
 
+	fmt.Println(values)
 	t.ModbusValues(renderMode, values)
+	fmt.Println(values)
 
 	res := make(map[string]interface{})
 

@@ -49,6 +49,7 @@ func (t *Template) ModbusValues(renderMode string, values map[string]interface{}
 	modbusConfig := ConfigDefaults.Modbus
 	_, modbusParam := t.ParamByName(ParamModbus)
 
+	fmt.Println(modbusParam)
 	modbusInterfaces := []string{}
 	for _, choice := range choices {
 		modbusInterfaces = append(modbusInterfaces, modbusConfig.Interfaces[choice]...)
@@ -61,6 +62,9 @@ func (t *Template) ModbusValues(renderMode string, values map[string]interface{}
 
 	for _, iface := range modbusInterfaces {
 		typeParams := modbusConfig.Types[iface].Params
+
+		fmt.Println(iface)
+		fmt.Println(typeParams)
 
 		for _, p := range typeParams {
 			// don't overwrite custom values
@@ -90,6 +94,8 @@ func (t *Template) ModbusValues(renderMode string, values map[string]interface{}
 					defaultValue = modbusParam.Comset
 				}
 			}
+
+			fmt.Println(p.Name, ":", defaultValue)
 
 			if defaultValue != "" {
 				// for modbus params the default value is carried
