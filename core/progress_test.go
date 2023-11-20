@@ -25,6 +25,10 @@ func TestProgress(t *testing.T) {
 		{60, true},
 		{65, false},
 		{70, true},
+		{65, false},
+		{60, true},
+		// {65, false},
+		// {70, true},
 	}
 
 	for _, tc := range tc {
