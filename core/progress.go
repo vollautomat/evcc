@@ -1,5 +1,7 @@
 package core
 
+import "math"
+
 type Progress struct {
 	min, step float64
 	current   *float64
@@ -19,10 +21,11 @@ func (p *Progress) NextStep(value float64) bool {
 		return false
 	}
 
-	lower := p.min
-	for lower < value-p.step {
-		lower += p.step
+	if value == 10 {
+		println(1)
 	}
+
+	lower := p.min + math.Trunc((value-p.min)/p.step)*p.step
 	upper := lower + p.step
 
 	defer func() {
@@ -36,7 +39,11 @@ func (p *Progress) NextStep(value float64) bool {
 		return false
 	}
 
-	if value < *p.current && value <= lower || value > *p.current && value >= upper {
+	if math.Abs(value-*p.current) >= p.step {
+		return true
+	}
+
+	if value <= *p.current && value <= lower || value >= *p.current && value >= upper {
 		return true
 	}
 

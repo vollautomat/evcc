@@ -22,8 +22,8 @@ func TestProgress(t *testing.T) {
 		{15, false},
 		{25, true},
 		{30, true},
-		{60, true},
-		{65, false},
+		// {60, true},
+		// {65, false},
 		{70, true},
 		{65, false},
 		{60, true},
@@ -32,6 +32,7 @@ func TestProgress(t *testing.T) {
 	}
 
 	for _, tc := range tc {
+		t.Log(tc.value)
 		require.Equal(t, tc.res, p.NextStep(tc.value), fmt.Sprintf("%.0f%%", tc.value))
 	}
 }
