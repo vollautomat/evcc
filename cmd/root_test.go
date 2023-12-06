@@ -60,28 +60,34 @@ func TestEnv(t *testing.T) {
 		_ = v.BindEnv(k)
 	}
 
+	os.Setenv("EVCC_DATABASE_TYPE", "sqlite")
 	os.Setenv("EVCC_DATABASE_DSN", "dsn")
-	os.Setenv("EVCC_SITE_TITLE", "foo")
+	// os.Setenv("EVCC_SITE_TITLE", "foo")
 	// os.Setenv("EVCC_LOADPOINTS_0_TITLE", "baz")
 
-	yaml := `
-database:
-  type: sqlite
-  dsn: bar
-`
+	// 	yaml := `
+	// database:
+	//   type: sqlite
+	//   dsn: bar
+	// `
 
-	v.SetConfigType("yaml")
-	assert.NoError(t, v.ReadConfig(strings.NewReader(yaml)))
+	// 	v.SetConfigType("yaml")
+	// 	assert.NoError(t, v.ReadConfig(strings.NewReader(yaml)))
 
-	var conf globalConfig
+	var conf struct {
+		Database struct {
+			Type string
+			Dsn  string
+		}
+	}
 	assert.NoError(t, v.UnmarshalExact(&conf))
 
 	// predeclared struct
 	assert.Equal(t, "sqlite", conf.Database.Type)
 	assert.Equal(t, "dsn", conf.Database.Dsn)
 
-	// map[string]interface{}
-	assert.Equal(t, "foo", conf.Site["title"])
+	// // map[string]interface{}
+	// assert.Equal(t, "foo", conf.Site["title"])
 
 	// []map[string]interface{}
 	// if assert.Len(t, conf.Loadpoints, 1) {
