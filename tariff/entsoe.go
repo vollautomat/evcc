@@ -4,7 +4,6 @@ import (
 	"bytes"
 	"encoding/xml"
 	"errors"
-	"net/http"
 	"slices"
 	"strings"
 	"sync"
@@ -98,7 +97,7 @@ func (t *Entsoe) run(done chan error) {
 
 			// Consider whether errors.As would be more appropriate if this needs to start dealing with wrapped errors.
 			if se, ok := err.(request.StatusError); ok {
-				if se.HasStatus(http.StatusBadRequest) {
+				if code := se.StatusCode(); code >= 400 && code < 500 {
 					return backoff.Permanent(se)
 				}
 

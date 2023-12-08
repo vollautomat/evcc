@@ -2,7 +2,6 @@ package tariff
 
 import (
 	"errors"
-	"net/http"
 	"slices"
 	"sync"
 	"time"
@@ -82,9 +81,10 @@ func (t *Ngeso) run(done chan error) {
 			carbonResponse, err = tReq.DoRequest(client)
 
 			// Consider whether errors.As would be more appropriate if this needs to start dealing with wrapped errors.
-			if se, ok := err.(request.StatusError); ok && se.HasStatus(http.StatusBadRequest) {
-				// Catch cases where we're sending completely incorrect data (usually the result of a bad region).
-				return backoff.Permanent(se)
+			if se, ok := err.(request.StatusError); ok {
+				if code := se.StatusCode(); code >= 400 && code < 500 {
+					return backoff.Permanent(se)
+				}
 			}
 			return err
 		}, bo); err != nil {
