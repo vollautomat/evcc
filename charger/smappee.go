@@ -103,7 +103,7 @@ func NewSmappee(user, password, location string, oc *oauth2.Config, cache time.D
 	// 	return res, err
 	// }, c.cache)
 
-	loc, serial, err := ensureChargerWithFeature(location, func() ([]smappee.ServiceLocation, error) {
+	_, serial, err := ensureChargerWithFeature(location, func() ([]smappee.ServiceLocation, error) {
 		var res smappee.ServiceLocations
 		if err := c.GetJSON(ApiURL+"/servicelocation", &res); err != nil {
 			return nil, err
@@ -115,17 +115,20 @@ func NewSmappee(user, password, location string, oc *oauth2.Config, cache time.D
 	if err != nil {
 		return nil, err
 	}
-	_ = loc
-	_ = serial
 
+	type Limit struct {
+		Unit  string `json:"unit,omitempty"`
+		Value int    `json:"value,omitempty"`
+	}
 	data := struct {
-		Mode string `json:"mode"`
+		Mode  string `json:"mode,omitempty"`
+		Limit *Limit `json:"limit,omitempty"`
 	}{
 		Mode: "SMART",
 	}
 
 	var res any
-	uri := fmt.Sprintf("%s/chargingstations/%s/connectors/%d/mode", ApiURL, serial, 0)
+	uri := fmt.Sprintf("%s/chargingstations/%s/connectors/%d/mode", ApiURL, serial, 1)
 	req, _ := request.New(http.MethodPut, uri, request.MarshalJSON(data), request.JSONEncoding)
 	if err := c.DoJSON(req, &res); err != nil {
 		return nil, err
