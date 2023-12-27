@@ -177,6 +177,21 @@ func loadConfigFile(conf *globalConfig) error {
 	return err
 }
 
+func meterInstance(cc config.Named) (api.Meter, error) {
+	instance, err := meter.NewFromConfig(cc.Type, cc.Other)
+	if err != nil {
+		return nil, fmt.Errorf("cannot create meter '%s': %w", cc.Name, err)
+	}
+
+	// ensure vehicle config has title
+	if instance.Title() == "" {
+		//lint:ignore SA1019 as Title is safe on ascii
+		instance.SetTitle(strings.Title(cc.Name))
+	}
+
+	return instance, nil
+}
+
 func configureMeters(static []config.Named, names ...string) error {
 	for i, cc := range static {
 		if cc.Name == "" {
@@ -187,9 +202,9 @@ func configureMeters(static []config.Named, names ...string) error {
 			continue
 		}
 
-		instance, err := meter.NewFromConfig(cc.Type, cc.Other)
+		instance, err := meterInstance(cc)
 		if err != nil {
-			return fmt.Errorf("cannot create meter '%s': %w", cc.Name, err)
+			return err
 		}
 
 		if err := config.Meters().Add(config.NewStaticDevice(cc, instance)); err != nil {
@@ -210,9 +225,9 @@ func configureMeters(static []config.Named, names ...string) error {
 			return nil
 		}
 
-		instance, err := meter.NewFromConfig(cc.Type, cc.Other)
+		instance, err := meterInstance(cc)
 		if err != nil {
-			return fmt.Errorf("cannot create meter '%s': %w", cc.Name, err)
+			return err
 		}
 
 		if err := config.Meters().Add(config.NewConfigurableDevice(conf, instance)); err != nil {
