@@ -9,6 +9,12 @@ import (
 	"github.com/evcc-io/evcc/util"
 )
 
+// Meter is an api.Meter implementation with configurable getters and setters.
+type Meter struct {
+	*embed
+	powerG func() (float64, error)
+}
+
 func init() {
 	registry.Add(api.Custom, NewConfigurableFromConfig)
 }
@@ -18,6 +24,7 @@ func init() {
 // NewConfigurableFromConfig creates api.Meter from config
 func NewConfigurableFromConfig(other map[string]interface{}) (api.Meter, error) {
 	cc := struct {
+		embed    `mapstructure:",squash"`
 		Power    provider.Config
 		Energy   *provider.Config  // optional
 		Currents []provider.Config // optional
@@ -41,12 +48,15 @@ func NewConfigurableFromConfig(other map[string]interface{}) (api.Meter, error) 
 		return nil, err
 	}
 
-	power, err := provider.NewFloatGetterFromConfig(cc.Power)
+	powerG, err := provider.NewFloatGetterFromConfig(cc.Power)
 	if err != nil {
 		return nil, fmt.Errorf("power: %w", err)
 	}
 
-	m, _ := NewConfigurable(power)
+	m := &Meter{
+		embed:  &cc.embed,
+		powerG: powerG,
+	}
 
 	// decorate energy
 	var totalEnergyG func() (float64, error)
@@ -104,9 +114,12 @@ func NewConfigurableFromConfig(other map[string]interface{}) (api.Meter, error) 
 		batModeS = cc.battery.ModeController(modeS)
 	}
 
-	res := m.Decorate(totalEnergyG, currentsG, voltagesG, powersG, socG, cc.capacity.Decorator(), batModeS)
+	return decorateMeter(m, totalEnergyG, currentsG, voltagesG, powersG, socG, cc.capacity.Decorator(), batModeS), nil
+}
 
-	return res, nil
+// CurrentPower implements the api.Meter interface
+func (m *Meter) CurrentPower() (float64, error) {
+	return m.powerG()
 }
 
 func buildPhaseProviders(providers []provider.Config) (func() (float64, float64, float64, error), error) {
@@ -147,35 +160,4 @@ func collectPhaseProviders(g []func() (float64, error)) func() (float64, float64
 
 		return res[0], res[1], res[2], nil
 	}
-}
-
-// NewConfigurable creates a new meter
-func NewConfigurable(currentPowerG func() (float64, error)) (*Meter, error) {
-	m := &Meter{
-		currentPowerG: currentPowerG,
-	}
-	return m, nil
-}
-
-// Meter is an api.Meter implementation with configurable getters and setters.
-type Meter struct {
-	currentPowerG func() (float64, error)
-}
-
-// Decorate attaches additional capabilities to the base meter
-func (m *Meter) Decorate(
-	totalEnergy func() (float64, error),
-	currents func() (float64, float64, float64, error),
-	voltages func() (float64, float64, float64, error),
-	powers func() (float64, float64, float64, error),
-	batterySoc func() (float64, error),
-	capacity func() float64,
-	setBatteryMode func(api.BatteryMode) error,
-) api.Meter {
-	return decorateMeter(m, totalEnergy, currents, voltages, powers, batterySoc, capacity, setBatteryMode)
-}
-
-// CurrentPower implements the api.Meter interface
-func (m *Meter) CurrentPower() (float64, error) {
-	return m.currentPowerG()
 }

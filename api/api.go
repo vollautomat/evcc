@@ -84,8 +84,15 @@ func (c ChargeStatus) String() string {
 	return string(c)
 }
 
+// Denominator adds title
+type Denominator interface {
+	Title() string
+	SetTitle(string)
+}
+
 // Meter provides total active power in W
 type Meter interface {
+	Denominator
 	CurrentPower() (float64, error)
 }
 
@@ -187,8 +194,7 @@ type Vehicle interface {
 	Battery
 	BatteryCapacity
 	IconDescriber
-	Title() string
-	SetTitle(string)
+	Denominator
 	Phases() int
 	Identifiers() []string
 	OnIdentified() ActionConfig
