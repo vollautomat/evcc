@@ -3,6 +3,7 @@ package charger
 import (
 	"fmt"
 
+	"github.com/evcc-io/evcc/util"
 	"github.com/lorenzodonini/ocpp-go/ocpp1.6/core"
 	"github.com/lorenzodonini/ocpp-go/ocpp1.6/remotetrigger"
 	"github.com/lorenzodonini/ocpp-go/ocpp1.6/types"
@@ -34,16 +35,15 @@ func (handler *ChargePointHandler) OnDataTransfer(request *core.DataTransferRequ
 
 func (handler *ChargePointHandler) OnGetConfiguration(request *core.GetConfigurationRequest) (confirmation *core.GetConfigurationConfirmation, err error) {
 	fmt.Printf("%T %+v\n", request, request)
-	one := "1"
-	meter := "Power.Active.Import,Energy.Active.Import.Register"
+	one := util.Addr("1")
 	return core.NewGetConfigurationConfirmation([]core.ConfigurationKey{
 		{Key: "AuthorizationKey"},
-		{Key: "NumberOfConnectors", Value: &one},
-		{Key: "ChargeProfileMaxStackLevel", Value: &one},
-		{Key: "ChargingScheduleMaxPeriods", Value: &one},
-		{Key: "MaxChargingProfilesInstalled", Value: &one},
-		{Key: "ChargingScheduleAllowedChargingRateUnit", Value: &one},
-		{Key: "MeterValuesSampledData", Value: &meter},
+		{Key: "NumberOfConnectors", Value: one},
+		{Key: "ChargeProfileMaxStackLevel", Value: one},
+		{Key: "ChargingScheduleMaxPeriods", Value: one},
+		{Key: "MaxChargingProfilesInstalled", Value: one},
+		{Key: "ChargingScheduleAllowedChargingRateUnit", Value: one},
+		{Key: "MeterValuesSampledData", Value: util.Addr("Power.Active.Import,Energy.Active.Import.Register")},
 	}), nil
 }
 
