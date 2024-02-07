@@ -441,8 +441,6 @@ func (site *Site) retryMeter(name string, meter api.Meter, power *float64) error
 // updateMeter updates and publishes single meter
 func (site *Site) updateMeters() error {
 	if len(site.pvMeters) > 0 {
-		var totalEnergy float64
-
 		site.pvPower = 0
 
 		mm := make([]meterMeasurement, len(site.pvMeters))
@@ -467,9 +465,7 @@ func (site *Site) updateMeters() error {
 			var energy float64
 			if m, ok := meter.(api.MeterEnergy); err == nil && ok {
 				energy, err = m.TotalEnergy()
-				if err == nil {
-					totalEnergy += energy
-				} else {
+				if err != nil {
 					site.log.ERROR.Printf("pv %d energy: %v", i+1, err)
 				}
 			}
@@ -483,14 +479,11 @@ func (site *Site) updateMeters() error {
 		site.log.DEBUG.Printf("pv power: %.0fW", site.pvPower)
 		site.publish(keys.PvPower, site.pvPower)
 
-		site.publish(keys.PvEnergy, totalEnergy)
-
 		site.publish(keys.Pv, mm)
 	}
 
 	if len(site.batteryMeters) > 0 {
 		var totalCapacity float64
-		var totalEnergy float64
 
 		site.batteryPower = 0
 		site.batterySoc = 0
@@ -517,9 +510,7 @@ func (site *Site) updateMeters() error {
 			var energy float64
 			if m, ok := meter.(api.MeterEnergy); err == nil && ok {
 				energy, err = m.TotalEnergy()
-				if err == nil {
-					totalEnergy += energy
-				} else {
+				if err != nil {
 					site.log.ERROR.Printf("battery %d energy: %v", i+1, err)
 				}
 			}
@@ -571,8 +562,6 @@ func (site *Site) updateMeters() error {
 
 		site.log.DEBUG.Printf("battery power: %.0fW", site.batteryPower)
 		site.publish(keys.BatteryPower, site.batteryPower)
-
-		site.publish(keys.BatteryEnergy, totalEnergy)
 
 		site.publish(keys.Battery, mm)
 	}
@@ -679,6 +668,16 @@ func (site *Site) sitePower(totalChargePower, flexiblePower float64) (float64, b
 				site.log.DEBUG.Printf("aux power %d: %.0fW", i+1, power)
 			} else {
 				site.log.ERROR.Printf("aux meter %d: %v", i+1, err)
+			}
+
+			// aux energy
+			if m, ok := meter.(api.MeterEnergy); ok {
+				energy, err := m.TotalEnergy()
+				if err == nil {
+					mm[i].Energy = energy
+				} else {
+					site.log.ERROR.Printf("aux %d energy: %v", i+1, err)
+				}
 			}
 		}
 
