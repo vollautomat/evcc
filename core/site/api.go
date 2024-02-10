@@ -3,6 +3,7 @@ package site
 import (
 	"github.com/evcc-io/evcc/api"
 	"github.com/evcc-io/evcc/core/loadpoint"
+	"github.com/evcc-io/evcc/tariff"
 )
 
 // API is the external site API
@@ -15,7 +16,11 @@ type API interface {
 	GetTitle() string
 	SetTitle(string)
 
-	// Config
+	// Loadpoint config
+	GetLoadpointRefs() []string
+	SetLoadpointRefs([]string) // TODO clarify lifecycle
+
+	// Meters config
 	GetGridMeterRef() string
 	SetGridMeterRef(string)
 	GetPVMeterRefs() []string
