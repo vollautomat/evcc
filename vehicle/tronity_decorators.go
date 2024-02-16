@@ -6,12 +6,12 @@ import (
 	"github.com/evcc-io/evcc/api"
 )
 
-func decorateTronity(base *Tronity, chargeState func() (api.ChargeStatus, error), vehicleOdometer func() (float64, error), vehicleStartCharge func() error, vehicleStopCharge func() error) api.Vehicle {
+func decorateTronity(base *Tronity, chargeState func() (api.ChargeStatus, error), vehicleOdometer func() (float64, error), vehiclePosition func() (float64, float64, error), vehicleRange func() (int64, error), vehicleStartCharge func() error, vehicleStopCharge func() error) api.Vehicle {
 	switch {
-	case chargeState == nil && vehicleOdometer == nil && vehicleStartCharge == nil && vehicleStopCharge == nil:
+	case chargeState == nil && vehicleOdometer == nil && vehiclePosition == nil && vehicleRange == nil && vehicleStartCharge == nil && vehicleStopCharge == nil:
 		return base
 
-	case chargeState != nil && vehicleOdometer == nil && vehicleStartCharge == nil && vehicleStopCharge == nil:
+	case chargeState != nil && vehicleOdometer == nil && vehiclePosition == nil && vehicleRange == nil && vehicleStartCharge == nil && vehicleStopCharge == nil:
 		return &struct {
 			*Tronity
 			api.ChargeState
@@ -22,7 +22,7 @@ func decorateTronity(base *Tronity, chargeState func() (api.ChargeStatus, error)
 			},
 		}
 
-	case chargeState == nil && vehicleOdometer != nil && vehicleStartCharge == nil && vehicleStopCharge == nil:
+	case chargeState == nil && vehicleOdometer != nil && vehiclePosition == nil && vehicleRange == nil && vehicleStartCharge == nil && vehicleStopCharge == nil:
 		return &struct {
 			*Tronity
 			api.VehicleOdometer
@@ -33,7 +33,7 @@ func decorateTronity(base *Tronity, chargeState func() (api.ChargeStatus, error)
 			},
 		}
 
-	case chargeState != nil && vehicleOdometer != nil && vehicleStartCharge == nil && vehicleStopCharge == nil:
+	case chargeState != nil && vehicleOdometer != nil && vehiclePosition == nil && vehicleRange == nil && vehicleStartCharge == nil && vehicleStopCharge == nil:
 		return &struct {
 			*Tronity
 			api.ChargeState
@@ -48,67 +48,53 @@ func decorateTronity(base *Tronity, chargeState func() (api.ChargeStatus, error)
 			},
 		}
 
-	case chargeState == nil && vehicleOdometer == nil && vehicleStartCharge != nil && vehicleStopCharge != nil:
+	case chargeState == nil && vehicleOdometer == nil && vehiclePosition != nil && vehicleRange == nil && vehicleStartCharge == nil && vehicleStopCharge == nil:
 		return &struct {
 			*Tronity
-			api.VehicleChargeController
+			api.VehiclePosition
 		}{
 			Tronity: base,
-			VehicleChargeController: &decorateTronityVehicleChargeControllerImpl{
-				vehicleStartCharge: vehicleStartCharge,
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
 			},
 		}
 
-	case chargeState == nil && vehicleOdometer == nil && vehicleStartCharge != nil && vehicleStopCharge != nil:
-		return &struct {
-			*Tronity
-			api.VehicleChargeController
-		}{
-			Tronity: base,
-			VehicleChargeController: &decorateTronityVehicleChargeControllerImpl{
-				vehicleStartCharge: vehicleStartCharge,
-				vehicleStopCharge:  vehicleStopCharge,
-			},
-		}
-
-	case chargeState != nil && vehicleOdometer == nil && vehicleStartCharge != nil && vehicleStopCharge != nil:
+	case chargeState != nil && vehicleOdometer == nil && vehiclePosition != nil && vehicleRange == nil && vehicleStartCharge == nil && vehicleStopCharge == nil:
 		return &struct {
 			*Tronity
 			api.ChargeState
-			api.VehicleChargeController
+			api.VehiclePosition
 		}{
 			Tronity: base,
 			ChargeState: &decorateTronityChargeStateImpl{
 				chargeState: chargeState,
 			},
-			VehicleChargeController: &decorateTronityVehicleChargeControllerImpl{
-				vehicleStartCharge: vehicleStartCharge,
-				vehicleStopCharge:  vehicleStopCharge,
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
 			},
 		}
 
-	case chargeState == nil && vehicleOdometer != nil && vehicleStartCharge != nil && vehicleStopCharge != nil:
+	case chargeState == nil && vehicleOdometer != nil && vehiclePosition != nil && vehicleRange == nil && vehicleStartCharge == nil && vehicleStopCharge == nil:
 		return &struct {
 			*Tronity
 			api.VehicleOdometer
-			api.VehicleChargeController
+			api.VehiclePosition
 		}{
 			Tronity: base,
 			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
 				vehicleOdometer: vehicleOdometer,
 			},
-			VehicleChargeController: &decorateTronityVehicleChargeControllerImpl{
-				vehicleStartCharge: vehicleStartCharge,
-				vehicleStopCharge:  vehicleStopCharge,
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
 			},
 		}
 
-	case chargeState != nil && vehicleOdometer != nil && vehicleStartCharge != nil && vehicleStopCharge != nil:
+	case chargeState != nil && vehicleOdometer != nil && vehiclePosition != nil && vehicleRange == nil && vehicleStartCharge == nil && vehicleStopCharge == nil:
 		return &struct {
 			*Tronity
 			api.ChargeState
 			api.VehicleOdometer
-			api.VehicleChargeController
+			api.VehiclePosition
 		}{
 			Tronity: base,
 			ChargeState: &decorateTronityChargeStateImpl{
@@ -117,9 +103,1120 @@ func decorateTronity(base *Tronity, chargeState func() (api.ChargeStatus, error)
 			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
 				vehicleOdometer: vehicleOdometer,
 			},
-			VehicleChargeController: &decorateTronityVehicleChargeControllerImpl{
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer == nil && vehiclePosition == nil && vehicleRange != nil && vehicleStartCharge == nil && vehicleStopCharge == nil:
+		return &struct {
+			*Tronity
+			api.VehicleRange
+		}{
+			Tronity: base,
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer == nil && vehiclePosition == nil && vehicleRange != nil && vehicleStartCharge == nil && vehicleStopCharge == nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehicleRange
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer != nil && vehiclePosition == nil && vehicleRange != nil && vehicleStartCharge == nil && vehicleStopCharge == nil:
+		return &struct {
+			*Tronity
+			api.VehicleOdometer
+			api.VehicleRange
+		}{
+			Tronity: base,
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer != nil && vehiclePosition == nil && vehicleRange != nil && vehicleStartCharge == nil && vehicleStopCharge == nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehicleOdometer
+			api.VehicleRange
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer == nil && vehiclePosition != nil && vehicleRange != nil && vehicleStartCharge == nil && vehicleStopCharge == nil:
+		return &struct {
+			*Tronity
+			api.VehiclePosition
+			api.VehicleRange
+		}{
+			Tronity: base,
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer == nil && vehiclePosition != nil && vehicleRange != nil && vehicleStartCharge == nil && vehicleStopCharge == nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehiclePosition
+			api.VehicleRange
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer != nil && vehiclePosition != nil && vehicleRange != nil && vehicleStartCharge == nil && vehicleStopCharge == nil:
+		return &struct {
+			*Tronity
+			api.VehicleOdometer
+			api.VehiclePosition
+			api.VehicleRange
+		}{
+			Tronity: base,
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer != nil && vehiclePosition != nil && vehicleRange != nil && vehicleStartCharge == nil && vehicleStopCharge == nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehicleOdometer
+			api.VehiclePosition
+			api.VehicleRange
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer == nil && vehiclePosition == nil && vehicleRange == nil && vehicleStartCharge != nil && vehicleStopCharge == nil:
+		return &struct {
+			*Tronity
+			api.VehicleStartCharge
+		}{
+			Tronity: base,
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
 				vehicleStartCharge: vehicleStartCharge,
-				vehicleStopCharge:  vehicleStopCharge,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer == nil && vehiclePosition == nil && vehicleRange == nil && vehicleStartCharge != nil && vehicleStopCharge == nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehicleStartCharge
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer != nil && vehiclePosition == nil && vehicleRange == nil && vehicleStartCharge != nil && vehicleStopCharge == nil:
+		return &struct {
+			*Tronity
+			api.VehicleOdometer
+			api.VehicleStartCharge
+		}{
+			Tronity: base,
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer != nil && vehiclePosition == nil && vehicleRange == nil && vehicleStartCharge != nil && vehicleStopCharge == nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehicleOdometer
+			api.VehicleStartCharge
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer == nil && vehiclePosition != nil && vehicleRange == nil && vehicleStartCharge != nil && vehicleStopCharge == nil:
+		return &struct {
+			*Tronity
+			api.VehiclePosition
+			api.VehicleStartCharge
+		}{
+			Tronity: base,
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer == nil && vehiclePosition != nil && vehicleRange == nil && vehicleStartCharge != nil && vehicleStopCharge == nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehiclePosition
+			api.VehicleStartCharge
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer != nil && vehiclePosition != nil && vehicleRange == nil && vehicleStartCharge != nil && vehicleStopCharge == nil:
+		return &struct {
+			*Tronity
+			api.VehicleOdometer
+			api.VehiclePosition
+			api.VehicleStartCharge
+		}{
+			Tronity: base,
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer != nil && vehiclePosition != nil && vehicleRange == nil && vehicleStartCharge != nil && vehicleStopCharge == nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehicleOdometer
+			api.VehiclePosition
+			api.VehicleStartCharge
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer == nil && vehiclePosition == nil && vehicleRange != nil && vehicleStartCharge != nil && vehicleStopCharge == nil:
+		return &struct {
+			*Tronity
+			api.VehicleRange
+			api.VehicleStartCharge
+		}{
+			Tronity: base,
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer == nil && vehiclePosition == nil && vehicleRange != nil && vehicleStartCharge != nil && vehicleStopCharge == nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehicleRange
+			api.VehicleStartCharge
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer != nil && vehiclePosition == nil && vehicleRange != nil && vehicleStartCharge != nil && vehicleStopCharge == nil:
+		return &struct {
+			*Tronity
+			api.VehicleOdometer
+			api.VehicleRange
+			api.VehicleStartCharge
+		}{
+			Tronity: base,
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer != nil && vehiclePosition == nil && vehicleRange != nil && vehicleStartCharge != nil && vehicleStopCharge == nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehicleOdometer
+			api.VehicleRange
+			api.VehicleStartCharge
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer == nil && vehiclePosition != nil && vehicleRange != nil && vehicleStartCharge != nil && vehicleStopCharge == nil:
+		return &struct {
+			*Tronity
+			api.VehiclePosition
+			api.VehicleRange
+			api.VehicleStartCharge
+		}{
+			Tronity: base,
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer == nil && vehiclePosition != nil && vehicleRange != nil && vehicleStartCharge != nil && vehicleStopCharge == nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehiclePosition
+			api.VehicleRange
+			api.VehicleStartCharge
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer != nil && vehiclePosition != nil && vehicleRange != nil && vehicleStartCharge != nil && vehicleStopCharge == nil:
+		return &struct {
+			*Tronity
+			api.VehicleOdometer
+			api.VehiclePosition
+			api.VehicleRange
+			api.VehicleStartCharge
+		}{
+			Tronity: base,
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer != nil && vehiclePosition != nil && vehicleRange != nil && vehicleStartCharge != nil && vehicleStopCharge == nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehicleOdometer
+			api.VehiclePosition
+			api.VehicleRange
+			api.VehicleStartCharge
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer == nil && vehiclePosition == nil && vehicleRange == nil && vehicleStartCharge == nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer == nil && vehiclePosition == nil && vehicleRange == nil && vehicleStartCharge == nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer != nil && vehiclePosition == nil && vehicleRange == nil && vehicleStartCharge == nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.VehicleOdometer
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer != nil && vehiclePosition == nil && vehicleRange == nil && vehicleStartCharge == nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehicleOdometer
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer == nil && vehiclePosition != nil && vehicleRange == nil && vehicleStartCharge == nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.VehiclePosition
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer == nil && vehiclePosition != nil && vehicleRange == nil && vehicleStartCharge == nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehiclePosition
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer != nil && vehiclePosition != nil && vehicleRange == nil && vehicleStartCharge == nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.VehicleOdometer
+			api.VehiclePosition
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer != nil && vehiclePosition != nil && vehicleRange == nil && vehicleStartCharge == nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehicleOdometer
+			api.VehiclePosition
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer == nil && vehiclePosition == nil && vehicleRange != nil && vehicleStartCharge == nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.VehicleRange
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer == nil && vehiclePosition == nil && vehicleRange != nil && vehicleStartCharge == nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehicleRange
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer != nil && vehiclePosition == nil && vehicleRange != nil && vehicleStartCharge == nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.VehicleOdometer
+			api.VehicleRange
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer != nil && vehiclePosition == nil && vehicleRange != nil && vehicleStartCharge == nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehicleOdometer
+			api.VehicleRange
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer == nil && vehiclePosition != nil && vehicleRange != nil && vehicleStartCharge == nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.VehiclePosition
+			api.VehicleRange
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer == nil && vehiclePosition != nil && vehicleRange != nil && vehicleStartCharge == nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehiclePosition
+			api.VehicleRange
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer != nil && vehiclePosition != nil && vehicleRange != nil && vehicleStartCharge == nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.VehicleOdometer
+			api.VehiclePosition
+			api.VehicleRange
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer != nil && vehiclePosition != nil && vehicleRange != nil && vehicleStartCharge == nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehicleOdometer
+			api.VehiclePosition
+			api.VehicleRange
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer == nil && vehiclePosition == nil && vehicleRange == nil && vehicleStartCharge != nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.VehicleStartCharge
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer == nil && vehiclePosition == nil && vehicleRange == nil && vehicleStartCharge != nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehicleStartCharge
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer != nil && vehiclePosition == nil && vehicleRange == nil && vehicleStartCharge != nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.VehicleOdometer
+			api.VehicleStartCharge
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer != nil && vehiclePosition == nil && vehicleRange == nil && vehicleStartCharge != nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehicleOdometer
+			api.VehicleStartCharge
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer == nil && vehiclePosition != nil && vehicleRange == nil && vehicleStartCharge != nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.VehiclePosition
+			api.VehicleStartCharge
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer == nil && vehiclePosition != nil && vehicleRange == nil && vehicleStartCharge != nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehiclePosition
+			api.VehicleStartCharge
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer != nil && vehiclePosition != nil && vehicleRange == nil && vehicleStartCharge != nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.VehicleOdometer
+			api.VehiclePosition
+			api.VehicleStartCharge
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer != nil && vehiclePosition != nil && vehicleRange == nil && vehicleStartCharge != nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehicleOdometer
+			api.VehiclePosition
+			api.VehicleStartCharge
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer == nil && vehiclePosition == nil && vehicleRange != nil && vehicleStartCharge != nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.VehicleRange
+			api.VehicleStartCharge
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer == nil && vehiclePosition == nil && vehicleRange != nil && vehicleStartCharge != nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehicleRange
+			api.VehicleStartCharge
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer != nil && vehiclePosition == nil && vehicleRange != nil && vehicleStartCharge != nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.VehicleOdometer
+			api.VehicleRange
+			api.VehicleStartCharge
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer != nil && vehiclePosition == nil && vehicleRange != nil && vehicleStartCharge != nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehicleOdometer
+			api.VehicleRange
+			api.VehicleStartCharge
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer == nil && vehiclePosition != nil && vehicleRange != nil && vehicleStartCharge != nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.VehiclePosition
+			api.VehicleRange
+			api.VehicleStartCharge
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer == nil && vehiclePosition != nil && vehicleRange != nil && vehicleStartCharge != nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehiclePosition
+			api.VehicleRange
+			api.VehicleStartCharge
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState == nil && vehicleOdometer != nil && vehiclePosition != nil && vehicleRange != nil && vehicleStartCharge != nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.VehicleOdometer
+			api.VehiclePosition
+			api.VehicleRange
+			api.VehicleStartCharge
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
+			},
+		}
+
+	case chargeState != nil && vehicleOdometer != nil && vehiclePosition != nil && vehicleRange != nil && vehicleStartCharge != nil && vehicleStopCharge != nil:
+		return &struct {
+			*Tronity
+			api.ChargeState
+			api.VehicleOdometer
+			api.VehiclePosition
+			api.VehicleRange
+			api.VehicleStartCharge
+			api.VehicleStopCharge
+		}{
+			Tronity: base,
+			ChargeState: &decorateTronityChargeStateImpl{
+				chargeState: chargeState,
+			},
+			VehicleOdometer: &decorateTronityVehicleOdometerImpl{
+				vehicleOdometer: vehicleOdometer,
+			},
+			VehiclePosition: &decorateTronityVehiclePositionImpl{
+				vehiclePosition: vehiclePosition,
+			},
+			VehicleRange: &decorateTronityVehicleRangeImpl{
+				vehicleRange: vehicleRange,
+			},
+			VehicleStartCharge: &decorateTronityVehicleStartChargeImpl{
+				vehicleStartCharge: vehicleStartCharge,
+			},
+			VehicleStopCharge: &decorateTronityVehicleStopChargeImpl{
+				vehicleStopCharge: vehicleStopCharge,
 			},
 		}
 	}
@@ -143,15 +1240,34 @@ func (impl *decorateTronityVehicleOdometerImpl) Odometer() (float64, error) {
 	return impl.vehicleOdometer()
 }
 
-type decorateTronityVehicleChargeControllerImpl struct {
-	vehicleStartCharge func() error
-	vehicleStopCharge  func() error
+type decorateTronityVehiclePositionImpl struct {
+	vehiclePosition func() (float64, float64, error)
 }
 
-func (impl *decorateTronityVehicleChargeControllerImpl) StartCharge() error {
+func (impl *decorateTronityVehiclePositionImpl) Position() (float64, float64, error) {
+	return impl.vehiclePosition()
+}
+
+type decorateTronityVehicleRangeImpl struct {
+	vehicleRange func() (int64, error)
+}
+
+func (impl *decorateTronityVehicleRangeImpl) Range() (int64, error) {
+	return impl.vehicleRange()
+}
+
+type decorateTronityVehicleStartChargeImpl struct {
+	vehicleStartCharge func() error
+}
+
+func (impl *decorateTronityVehicleStartChargeImpl) StartCharge() error {
 	return impl.vehicleStartCharge()
 }
 
-func (impl *decorateTronityVehicleChargeControllerImpl) StopCharge() error {
+type decorateTronityVehicleStopChargeImpl struct {
+	vehicleStopCharge func() error
+}
+
+func (impl *decorateTronityVehicleStopChargeImpl) StopCharge() error {
 	return impl.vehicleStopCharge()
 }

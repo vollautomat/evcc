@@ -48,7 +48,7 @@ func init() {
 	registry.Add("tronity", NewTronityFromConfig)
 }
 
-// go:generate go run ../cmd/tools/decorate.go -f decorateTronity -b *Tronity -r api.Vehicle -t "api.ChargeState,Status,func() (api.ChargeStatus, error)" -t "api.VehicleOdometer,Odometer,func() (float64, error)" -t "api.VehicleChargeController,StartCharge,func() error" -t "api.VehicleChargeController,StopCharge,func() error"
+//go:generate go run ../cmd/tools/decorate.go -f decorateTronity -b *Tronity -r api.Vehicle -t "api.ChargeState,Status,func() (api.ChargeStatus, error)" -t "api.VehicleOdometer,Odometer,func() (float64, error)" -t "api.VehiclePosition,Position,func() (float64, float64, error)" -t "api.VehicleRange,Range,func() (int64, error)" -t "api.VehicleStartCharge,StartCharge,func() error" -t "api.VehicleStopCharge,StopCharge,func() error"
 
 // NewTronityFromConfig creates a new vehicle
 func NewTronityFromConfig(other map[string]interface{}) (api.Vehicle, error) {
@@ -131,13 +131,23 @@ func NewTronityFromConfig(other map[string]interface{}) (api.Vehicle, error) {
 		odometer = v.odometer
 	}
 
+	var position func() (float64, float64, error)
+	if slices.Contains(vehicle.Scopes, tronity.ReadLocation) {
+		position = v.position
+	}
+
+	var range_ func() (int64, error)
+	if slices.Contains(vehicle.Scopes, tronity.ReadRange) {
+		range_ = v.range_
+	}
+
 	var start, stop func() error
 	if slices.Contains(vehicle.Scopes, tronity.WriteChargeStartStop) {
 		start = v.startCharge
 		stop = v.stopCharge
 	}
 
-	return decorateTronity(v, status, odometer, start, stop), nil
+	return decorateTronity(v, status, odometer, position, range_, start, stop), nil
 }
 
 // RefreshToken performs token refresh by logging in with app context
@@ -207,12 +217,16 @@ func (v *Tronity) status() (api.ChargeStatus, error) {
 	return status, nil
 }
 
-var _ api.VehicleRange = (*Tronity)(nil)
-
-// Range implements the api.VehicleRange interface
-func (v *Tronity) Range() (int64, error) {
+// range implements the api.VehicleRange interface
+func (v *Tronity) range_() (int64, error) {
 	res, err := v.bulkG()
 	return int64(res.Range), err
+}
+
+// position implements the api.VehiclePosition interface
+func (v *Tronity) position() (float64, float64, error) {
+	res, err := v.bulkG()
+	return res.Latitude, res.Longitude, err
 }
 
 // odometer implements the api.VehicleOdometer interface
