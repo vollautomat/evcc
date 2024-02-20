@@ -107,9 +107,13 @@ render: |
       address: 3171 # SOC
       type: input
       decode: uint16
-  {{- if .capacity }}
-  capacity: {{ .capacity }} # kWh
-  {{- end }}
+  limitsoc:
+    source: modbus
+    {{- include "modbus" . | indent 2 }}
+    register:
+      address: 3082 # SOC
+      type: holding
+      decode: uint16
   energy:
     source: modbus
     {{- include "modbus" . | indent 2 }}
@@ -118,4 +122,5 @@ render: |
       type: input
       decode: uint32
     scale: 0.1
+  capacity: {{ .capacity }} # kWh
   {{- end }}
