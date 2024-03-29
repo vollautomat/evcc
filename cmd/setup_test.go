@@ -23,20 +23,12 @@ func TestMode(t *testing.T) {
 func TestYamlOff(t *testing.T) {
 	var conf globalConfig
 	viper.SetConfigType("yaml")
-	if err := viper.ReadConfig(strings.NewReader(sample)); err != nil {
-		t.Error(err)
-	}
 
-	if err := viper.UnmarshalExact(&conf); err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, viper.ReadConfig(strings.NewReader(sample)))
+	require.NoError(t, viper.UnmarshalExact(&conf))
 
 	var lp core.Loadpoint
-	if err := util.DecodeOther(conf.Loadpoints[0], &lp); err != nil {
-		t.Error(err)
-	}
+	require.NoError(t, util.DecodeOther(conf.Loadpoints[0], &lp))
 
-	if lp.Mode_ != api.ModeOff {
-		t.Errorf("expected `off`, got %s", lp.Mode_)
-	}
+	require.Equal(t, api.ModeOff, lp.Mode_)
 }
