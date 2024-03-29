@@ -8,12 +8,17 @@ import (
 	"github.com/evcc-io/evcc/core"
 	"github.com/evcc-io/evcc/util"
 	"github.com/spf13/viper"
+	"github.com/stretchr/testify/require"
 )
 
 const sample = `
 loadpoints:
 - mode: off
 `
+
+func TestMode(t *testing.T) {
+	require.Contains(t, api.ChargeModeStrings(), "off")
+}
 
 func TestYamlOff(t *testing.T) {
 	var conf globalConfig
