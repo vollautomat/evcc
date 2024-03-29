@@ -27,7 +27,7 @@ func (a ActionConfig) String() string {
 }
 
 func (a ActionConfig) GetMode() (ChargeMode, bool) {
-	return a.Mode, a.Mode != ""
+	return a.Mode, a.Mode != ModeEmpty
 }
 
 func (a ActionConfig) GetMinCurrent() (float64, bool) {

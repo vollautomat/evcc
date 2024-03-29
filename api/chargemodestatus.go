@@ -5,23 +5,6 @@ import (
 	"strings"
 )
 
-// ChargeMode is the charge operation mode. Valid values are off, now, minpv and pv
-type ChargeMode string
-
-// Charge modes
-const (
-	ModeEmpty ChargeMode = ""
-	ModeOff   ChargeMode = "off"
-	ModeNow   ChargeMode = "now"
-	ModeMinPV ChargeMode = "minpv"
-	ModePV    ChargeMode = "pv"
-)
-
-// String implements Stringer
-func (c ChargeMode) String() string {
-	return string(c)
-}
-
 // ChargeStatus is the EV's charging status from A to F
 type ChargeStatus string
 

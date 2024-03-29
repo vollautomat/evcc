@@ -160,7 +160,7 @@ func (c *CmdConfigure) askValue(q question) string {
 	}
 
 	if q.valueType == templates.TypeChargeModes {
-		chargingModes := []string{string(api.ModeOff), string(api.ModeNow), string(api.ModeMinPV), string(api.ModePV)}
+		chargingModes := api.ChargeModeStrings()
 		chargeModes := []string{
 			c.localizedString("ChargeModeOff"),
 			c.localizedString("ChargeModeNow"),

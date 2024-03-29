@@ -262,11 +262,6 @@ func NewLoadpointFromConfig(log *util.Logger, settings *Settings, other map[stri
 		lp.log.WARN.Printf("PV mode enable threshold %.0fW > 0 will start PV charging on grid power consumption. Did you mean -%.0f?", lp.Enable.Threshold, lp.Enable.Threshold)
 	}
 
-	// choose sane default if mode is not set
-	if lp.mode = lp.Mode_; lp.mode == "" {
-		lp.mode = api.ModeOff
-	}
-
 	return lp, nil
 }
 
@@ -307,7 +302,9 @@ func (lp *Loadpoint) restoreSettings() {
 		return
 	}
 	if v, err := lp.settings.String(keys.Mode); err == nil && v != "" {
-		lp.setMode(api.ChargeMode(v))
+		if mode, err := api.ChargeModeString(v); err == nil {
+			lp.setMode(mode)
+		}
 	}
 	if v, err := lp.settings.Int(keys.PhasesConfigured); err == nil && (v > 0 || lp.hasPhaseSwitching()) {
 		lp.setConfiguredPhases(int(v))
@@ -560,7 +557,7 @@ func (lp *Loadpoint) defaultMode() {
 	mode := lp.Mode_
 	lp.RUnlock()
 
-	if mode != "" && mode != lp.GetMode() {
+	if mode != api.ModeEmpty && mode != lp.GetMode() {
 		lp.SetMode(mode)
 	}
 }
