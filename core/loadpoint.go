@@ -301,10 +301,9 @@ func (lp *Loadpoint) restoreSettings() {
 	if testing.Testing() {
 		return
 	}
-	if v, err := lp.settings.String(keys.Mode); err == nil && v != "" {
-		if mode, err := api.ChargeModeString(v); err == nil {
-			lp.setMode(mode)
-		}
+	var mode api.ChargeMode
+	if err := lp.settings.UnmarshalInto(keys.Mode, &mode); err == nil && mode != api.ModeEmpty {
+		lp.setMode(mode)
 	}
 	if v, err := lp.settings.Int(keys.PhasesConfigured); err == nil && (v > 0 || lp.hasPhaseSwitching()) {
 		lp.setConfiguredPhases(int(v))

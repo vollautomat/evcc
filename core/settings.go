@@ -1,6 +1,7 @@
 package core
 
 import (
+	"encoding"
 	"time"
 
 	"github.com/evcc-io/evcc/server/db/settings"
@@ -72,6 +73,14 @@ func (s *Settings) String(key string) (string, error) {
 		return "", nil
 	}
 	return settings.String(s.Key + key)
+}
+
+func (s *Settings) UnmarshalInto(key string, t encoding.TextUnmarshaler) error {
+	v, err := s.String(key)
+	if err != nil {
+		return err
+	}
+	return t.UnmarshalText([]byte(v))
 }
 
 func (s *Settings) Int(key string) (int64, error) {
