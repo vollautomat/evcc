@@ -1,6 +1,10 @@
 package semp
 
-import "encoding/xml"
+import (
+	"encoding/xml"
+
+	"github.com/evcc-io/evcc/api"
+)
 
 const (
 	urnUPNPDevice  = "urn:schemas-upnp-org:device-1-0"
@@ -58,6 +62,9 @@ type Device2EM struct {
 	DeviceInfo      []DeviceInfo      `xml:",omitempty"`
 	DeviceStatus    []DeviceStatus    `xml:",omitempty"`
 	PlanningRequest []PlanningRequest `xml:",omitempty"`
+	Parameters      struct {
+		Parameter []Parameter `xml:",omitempty"`
+	} `xml:"parameters,omitempty"`
 }
 
 // DeviceInfo message definition
@@ -69,7 +76,7 @@ type DeviceInfo struct {
 
 // Identification message definition
 type Identification struct {
-	DeviceID     string `xml:"DeviceId"`
+	DeviceID     string
 	DeviceName   string
 	DeviceType   string
 	DeviceSerial string
@@ -106,7 +113,7 @@ const (
 
 // DeviceStatus message definition
 type DeviceStatus struct {
-	DeviceID          string `xml:"DeviceId"`
+	DeviceID          string
 	EMSignalsAccepted bool
 	Status            string
 	PowerInfo         PowerInfo `xml:"PowerConsumption>PowerInfo"`
@@ -126,7 +133,7 @@ type PlanningRequest struct {
 
 // Timeframe message definition
 type Timeframe struct {
-	DeviceID            string `xml:"DeviceId"`
+	DeviceID            string
 	EarliestStart       int
 	LatestEnd           int
 	MinRunningTime      *int `xml:",omitempty"`
@@ -141,14 +148,38 @@ type Timeframe struct {
 type EM2Device struct {
 	Xmlns         string          `xml:"xmlns,attr"`
 	DeviceControl []DeviceControl `xml:",omitempty"`
+	Parameters    *Parameters     `xml:",omitempty"`
 }
 
 // DeviceControl message definition
 type DeviceControl struct {
-	DeviceID                    string `xml:"DeviceId"`
+	DeviceID                    string
 	On                          bool
 	RecommendedPowerConsumption float64 // AN EVCharger
 	Timestamp                   int
+}
+
+// Parameter message definition
+type Parameters struct {
+	Parameter []Parameter `xml:",omitempty"`
+}
+
+func (p *Parameters) Get(key string) (float64, error) {
+	if p == nil {
+		return 0, api.ErrNotAvailable
+	}
+	for _, param := range p.Parameter {
+		if param.ChannelID == key {
+			return param.Value, nil
+		}
+	}
+	return 0, api.ErrNotAvailable
+}
+
+// Parameters message definition
+type Parameter struct {
+	ChannelID string
+	Value     float64
 }
 
 // Device2EMMsg is the XML message container
