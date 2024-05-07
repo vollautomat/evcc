@@ -1,4 +1,4 @@
-package templates
+package api
 
 type Usage int
 

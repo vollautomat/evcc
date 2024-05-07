@@ -10,7 +10,6 @@ import (
 	"github.com/evcc-io/evcc/api"
 	"github.com/evcc-io/evcc/util"
 	"github.com/evcc-io/evcc/util/request"
-	"github.com/evcc-io/evcc/util/templates"
 	"github.com/sirupsen/logrus"
 	"github.com/spali/go-rscp/rscp"
 	"github.com/spf13/cast"
@@ -18,7 +17,7 @@ import (
 
 type E3dc struct {
 	dischargeLimit uint32
-	usage          templates.Usage // TODO check if we really want to depend on templates
+	usage          api.Usage // TODO check if we really want to depend on api
 	conn           *rscp.Client
 }
 
@@ -31,7 +30,7 @@ func init() {
 func NewE3dcFromConfig(other map[string]interface{}) (api.Meter, error) {
 	cc := struct {
 		capacity       `mapstructure:",squash"`
-		Usage          templates.Usage
+		Usage          api.Usage
 		Uri            string
 		User           string
 		Password       string
@@ -70,7 +69,7 @@ func NewE3dcFromConfig(other map[string]interface{}) (api.Meter, error) {
 
 var e3dcOnce sync.Once
 
-func NewE3dc(cfg rscp.ClientConfig, usage templates.Usage, dischargeLimit uint32, capacity func() float64) (api.Meter, error) {
+func NewE3dc(cfg rscp.ClientConfig, usage api.Usage, dischargeLimit uint32, capacity func() float64) (api.Meter, error) {
 	e3dcOnce.Do(func() {
 		log := util.NewLogger("e3dc")
 		rscp.Log.SetLevel(logrus.DebugLevel)
@@ -95,7 +94,7 @@ func NewE3dc(cfg rscp.ClientConfig, usage templates.Usage, dischargeLimit uint32
 		batteryMode     func(api.BatteryMode) error
 	)
 
-	if usage == templates.UsageBattery {
+	if usage == api.UsageBattery {
 		batteryCapacity = capacity
 		batterySoc = m.batterySoc
 		batteryMode = m.setBatteryMode
@@ -106,14 +105,14 @@ func NewE3dc(cfg rscp.ClientConfig, usage templates.Usage, dischargeLimit uint32
 
 func (m *E3dc) CurrentPower() (float64, error) {
 	switch m.usage {
-	case templates.UsageGrid:
+	case api.UsageGrid:
 		res, err := m.conn.Send(*rscp.NewMessage(rscp.EMS_REQ_POWER_GRID, nil))
 		if err != nil {
 			return 0, err
 		}
 		return rscpValue(*res, cast.ToFloat64E)
 
-	case templates.UsagePV:
+	case api.UsagePV:
 		res, err := m.conn.SendMultiple([]rscp.Message{
 			*rscp.NewMessage(rscp.EMS_REQ_POWER_PV, nil),
 			*rscp.NewMessage(rscp.EMS_REQ_POWER_ADD, nil),
@@ -129,7 +128,7 @@ func (m *E3dc) CurrentPower() (float64, error) {
 
 		return values[0] - values[1], nil
 
-	case templates.UsageBattery:
+	case api.UsageBattery:
 		res, err := m.conn.Send(*rscp.NewMessage(rscp.EMS_REQ_POWER_BAT, nil))
 		if err != nil {
 			return 0, err
