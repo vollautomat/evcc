@@ -130,8 +130,12 @@ func generateBrandJSON() error {
 				continue
 			}
 
-			for j := range tmpl.Params[i].Choice {
-				usage, _ := api.UsageString(tmpl.Params[i].Choice[j])
+			for _, choice := range tmpl.Params[i].Choice {
+				usage, err := api.UsageString(choice)
+				if err != nil {
+					return err
+				}
+
 				for _, product := range tmpl.Products {
 					if product.Brand == "" {
 						continue
