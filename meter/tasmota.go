@@ -1,7 +1,6 @@
 package meter
 
 import (
-	"strings"
 	"time"
 
 	"github.com/evcc-io/evcc/api"
@@ -12,7 +11,7 @@ import (
 // Tasmota meter implementation
 type Tasmota struct {
 	conn  *tasmota.Connection
-	usage string
+	usage api.Usage
 }
 
 // Tasmota meter implementation
@@ -29,7 +28,7 @@ func NewTasmotaFromConfig(other map[string]interface{}) (api.Meter, error) {
 		User     string
 		Password string
 		Channel  []int
-		Usage    string
+		Usage    api.Usage
 		Cache    time.Duration
 	}{
 		Channel: []int{1},
@@ -40,11 +39,11 @@ func NewTasmotaFromConfig(other map[string]interface{}) (api.Meter, error) {
 		return nil, err
 	}
 
-	return NewTasmota(cc.URI, cc.User, cc.Password, strings.ToLower(cc.Usage), cc.Channel, cc.Cache)
+	return NewTasmota(cc.URI, cc.User, cc.Password, cc.Usage, cc.Channel, cc.Cache)
 }
 
 // NewTasmota creates Tasmota meter
-func NewTasmota(uri, user, password, usage string, channels []int, cache time.Duration) (api.Meter, error) {
+func NewTasmota(uri, user, password string, usage api.Usage, channels []int, cache time.Duration) (api.Meter, error) {
 	conn, err := tasmota.NewConnection(uri, user, password, channels, cache)
 	if err != nil {
 		return nil, err
@@ -56,7 +55,7 @@ func NewTasmota(uri, user, password, usage string, channels []int, cache time.Du
 	}
 
 	var currents, voltages func() (float64, float64, float64, error)
-	if usage != "grid" && len(channels) == 3 {
+	if usage != api.UsageGrid && len(channels) == 3 {
 		currents = c.currents
 		voltages = c.voltages
 	}
@@ -68,7 +67,7 @@ var _ api.Meter = (*Tasmota)(nil)
 
 // CurrentPower implements the api.Meter interface
 func (c *Tasmota) CurrentPower() (float64, error) {
-	if c.usage == "grid" {
+	if c.usage == api.UsageGrid {
 		return c.conn.SmlPower()
 	}
 	return c.conn.CurrentPower()
@@ -78,7 +77,7 @@ var _ api.MeterEnergy = (*Tasmota)(nil)
 
 // TotalEnergy implements the api.MeterEnergy interface
 func (c *Tasmota) TotalEnergy() (float64, error) {
-	if c.usage == "grid" {
+	if c.usage == api.UsageGrid {
 		return c.conn.SmlTotalEnergy()
 	}
 	return c.conn.TotalEnergy()

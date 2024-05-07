@@ -43,7 +43,7 @@ func mercedesPinPrompt() (string, error) {
 }
 
 func mercedesToken() (*oauth2.Token, error) {
-	// Get username and region from user to initate the email process
+	// Get username and region from user to initiate the email process
 	username, region, err := mercedesUsernameAndRegionPrompt()
 	if err != nil {
 		return nil, err
