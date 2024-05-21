@@ -2,6 +2,8 @@ package util
 
 import (
 	"fmt"
+	"maps"
+	"slices"
 	"sync"
 )
 
@@ -13,7 +15,7 @@ type Cache struct {
 
 // flush is the value type used as parameter for flushing the cache.
 // Flushing is implemented by closing the channel. At this time, it is guaranteed
-// that the cache has catched up processing all pending messages.
+// that the cache has caught up processing all pending messages.
 type flush chan struct{}
 
 // Flusher returns a new flush channel
@@ -85,12 +87,7 @@ func (c *Cache) All() []Param {
 	c.Lock()
 	defer c.Unlock()
 
-	copy := make([]Param, 0, len(c.val))
-	for _, val := range c.val {
-		copy = append(copy, val)
-	}
-
-	return copy
+	return slices.Collect(maps.Values(c.val))
 }
 
 // Add entry to cache

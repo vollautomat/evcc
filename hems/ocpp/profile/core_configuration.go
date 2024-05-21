@@ -1,8 +1,10 @@
 package profile
 
 import (
+	"maps"
+	"slices"
+
 	"github.com/lorenzodonini/ocpp-go/ocpp1.6/core"
-	"golang.org/x/exp/maps"
 )
 
 // OnGetConfiguration handles the CS message
@@ -23,7 +25,7 @@ func (s *Core) OnGetConfiguration(request *core.GetConfigurationRequest) (confir
 
 	// return config for all keys
 	if len(request.Key) == 0 {
-		resultKeys = maps.Values(s.configuration)
+		resultKeys = slices.Collect(maps.Values(s.configuration))
 	}
 
 	s.log.TRACE.Printf("%s: configuration for requested keys: %v", request.GetFeatureName(), request.Key)
