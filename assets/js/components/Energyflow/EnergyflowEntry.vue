@@ -26,6 +26,18 @@
 				</div>
 			</span>
 		</div>
+		<div v-if="name == $t('main.energyflow.gridImport')" class="ms-4 ps-3">
+			<div class="d-flex justify-content-between">
+				<span>Status</span>
+				<span class="text-end text-nowrap ps-1 d-flex">{{consLimitStatus}}</span>
+				<span class="text-end text-nowrap ps-1 fw-bold d-flex">
+					<label>{{consLimitDuration}} s</label>
+					<div ref="climit" class="power">
+						<AnimatedNumber ref="climitNumber" :to="consLimitValue" :format="kw" />
+					</div>
+				</span>
+			</div>
+		</div>
 		<div v-if="$slots.subline" class="ms-4 ps-3">
 			<slot name="subline" />
 		</div>
@@ -57,10 +69,15 @@ export default {
 		detailsFmt: { type: Function },
 		detailsTooltip: { type: Array },
 		detailsClickable: { type: Boolean },
+		consLimit: { type: Object },
 	},
 	emits: ["details-clicked"],
 	data() {
-		return { powerTooltipInstance: null, detailsTooltipInstance: null };
+		return {
+			powerTooltipInstance: null,
+			detailsTooltipInstance: null,
+			nowTrigger: 0,
+		};
 	},
 	computed: {
 		active: function () {
@@ -72,6 +89,48 @@ export default {
 		isVehicle: function () {
 			return this.icon === "vehicle";
 		},
+		consLimitStatus: function () {
+			if ( ! this.consLimit )
+				return "Unknown";
+
+			switch (this.consLimit.status) {
+				case 0: return "Unlimited";
+				case 1: return "Limited";
+				case 2: return "Failsafe";
+				default: return "Unknown";
+			}
+		},
+		consLimitValue: function () {
+			if ( ! this.consLimit || this.consLimit.status == 0)
+				return 0;
+
+			if ( this.consLimit.status == 1 )
+				return this.consLimit.consumptionLimit.Value;
+			else if ( this.consLimit.status == 2 )
+				return this.consLimit.failsafeLimit;
+			else
+				return 0;
+		},
+		consLimitDuration: function () {
+			if ( ! this.consLimit || this.consLimit.status == 0 )
+				return 0;
+
+			this.nowTrigger++;
+
+			var duration = 0;
+			if ( this.consLimit.status == 1 ) {
+				duration = new Date( this.consLimit.statusUpdated ).getTime()
+						 + this.consLimit.consumptionLimit.Duration / 1000000
+						 - Date.now();
+			}
+			else if ( this.consLimit.status == 2 ) {
+				duration = new Date( this.consLimit.statusUpdated ).getTime()
+						 + this.consLimit.failsafeDuration / 1000000
+						 - Date.now();
+			} 
+			this.duration = Math.round( duration / 1000 + 0.5, 0 );
+			return Math.round( duration / 1000 + 0.5, 0 );
+		}
 	},
 	watch: {
 		powerTooltip(newVal, oldVal) {
@@ -94,6 +153,17 @@ export default {
 	mounted: function () {
 		this.updatePowerTooltip();
 		this.updateDetailsTooltip();
+
+		// setInterval(function() {
+		// 	if ( this.consLimit ) {
+		// 		console.log( Date.now() );
+
+		// 		var duration = new Date( this.consLimit.statusUpdated ).getTime()
+		// 					+ this.consLimit.consumptionLimit.Duration / 1000000
+		// 					- Date.now();
+		// 		this.duration = Math.round( duration / 1000 + 0.5, 0 );
+		// 	}
+		// }, 1000);
 	},
 	methods: {
 		kw: function (watt) {

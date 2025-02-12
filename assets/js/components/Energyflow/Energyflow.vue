@@ -116,6 +116,7 @@
 							:details="detailsValue(tariffGrid, tariffCo2)"
 							:detailsFmt="detailsFmt"
 							:detailsTooltip="detailsTooltip(tariffGrid, tariffCo2)"
+							:consLimit="consLimit"
 							data-testid="energyflow-entry-gridimport"
 						/>
 					</div>
@@ -266,6 +267,7 @@ export default {
 		prioritySoc: { type: Number },
 		bufferSoc: { type: Number },
 		bufferStartSoc: { type: Number },
+		consLimit: { type: Object },
 	},
 	data: () => {
 		return { detailsOpen: false, detailsCompleteHeight: null, ready: false };

@@ -110,6 +110,7 @@ export default {
 		bufferStartSoc: Number,
 		siteTitle: String,
 		vehicles: Object,
+		consLimit: Object,
 
 		auth: Object,
 

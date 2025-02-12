@@ -8,6 +8,7 @@ import (
 	ucapi "github.com/enbility/eebus-go/usecases/api"
 	"github.com/evcc-io/evcc/api"
 	"github.com/evcc-io/evcc/core/circuit"
+	"github.com/evcc-io/evcc/core/keys"
 	"github.com/evcc-io/evcc/core/site"
 	"github.com/evcc-io/evcc/server/eebus"
 	"github.com/evcc-io/evcc/util"
@@ -37,6 +38,14 @@ type Limits struct {
 	ConsumptionLimit                    float64
 	FailsafeConsumptionActivePowerLimit float64
 	FailsafeDurationMinimum             time.Duration
+}
+
+type uiInfo struct {
+	Status           status           `json:"status"`
+	StatusUpdated    time.Time        `json:"statusUpdated"`
+	ConsumptionLimit *ucapi.LoadLimit `json:"consumptionLimit"` // LPC-041
+	FailsafeLimit    float64          `json:"failsafeLimit"`
+	FailsafeDuration time.Duration    `json:"failsafeDuration"`
 }
 
 // New creates an EEBus HEMS from generic config
@@ -194,7 +203,7 @@ func (c *EEBus) run() error {
 
 	case StatusFailsafe:
 		// LPC-914/2
-		if d := c.failsafeDuration; heartbeatErr == nil && time.Since(c.statusUpdated) > d {
+		if d := c.failsafeDuration; heartbeatErr == nil || time.Since(c.statusUpdated) > d {
 			c.log.DEBUG.Println("heartbeat returned and failsafe duration exceeded- return to normal")
 			c.setStatusAndLimit(StatusUnlimited, 0)
 		}
@@ -208,8 +217,25 @@ func (c *EEBus) setStatusAndLimit(status status, limit float64) {
 	c.statusUpdated = time.Now()
 
 	c.setLimit(limit)
+
+	info := uiInfo{
+		Status:           c.status,
+		StatusUpdated:    c.statusUpdated,
+		ConsumptionLimit: c.consumptionLimit,
+		FailsafeLimit:    c.failsafeLimit,
+		FailsafeDuration: c.failsafeDuration,
+	}
+
+	c.publish(keys.ConsumptionLimit, info)
 }
 
 func (c *EEBus) setLimit(limit float64) {
 	c.root.SetMaxPower(limit)
+}
+
+// publish sends values to UI and databases
+func (c *EEBus) publish(key string, val interface{}) {
+	if eebus.Instance != nil {
+		eebus.Instance.Publish(key, val)
+	}
 }

@@ -1,6 +1,7 @@
 package eebus
 
 import (
+	"context"
 	"crypto/tls"
 	"errors"
 	"fmt"
@@ -29,6 +30,7 @@ import (
 	"github.com/enbility/spine-go/model"
 	"github.com/evcc-io/evcc/util"
 	"github.com/evcc-io/evcc/util/machine"
+	"github.com/smallnest/chanx"
 )
 
 type Device interface {
@@ -52,6 +54,8 @@ type UseCasesCS struct {
 }
 
 type EEBus struct {
+	uiChan chan<- util.Param // client push messages
+
 	service eebusapi.ServiceInterface
 
 	evseUC UseCasesEVSE
@@ -305,4 +309,31 @@ func (c *EEBus) Error(args ...interface{}) {
 
 func (c *EEBus) Errorf(format string, args ...interface{}) {
 	c.log.ERROR.Printf(format, args...)
+}
+
+// publish sends values to UI and databases
+func (c *EEBus) Publish(key string, val interface{}) {
+	// test helper
+	if c.uiChan == nil {
+		return
+	}
+
+	c.uiChan <- util.Param{Key: key, Val: val}
+}
+
+// Prepare attaches communication channels
+func (c *EEBus) Prepare(uiChan chan<- util.Param) {
+
+	// infinite queue with channel semantics
+	ch := chanx.NewUnboundedChan[util.Param](context.Background(), 2)
+
+	// use ch.In for writing
+	c.uiChan = ch.In
+
+	// use ch.Out for reading
+	go func() {
+		for p := range ch.Out {
+			uiChan <- p
+		}
+	}()
 }

@@ -16,6 +16,7 @@ import (
 	"github.com/evcc-io/evcc/core/keys"
 	"github.com/evcc-io/evcc/push"
 	"github.com/evcc-io/evcc/server"
+	"github.com/evcc-io/evcc/server/eebus"
 	"github.com/evcc-io/evcc/server/updater"
 	"github.com/evcc-io/evcc/util"
 	"github.com/evcc-io/evcc/util/auth"
@@ -312,6 +313,11 @@ func runRoot(cmd *cobra.Command, args []string) {
 		go func() {
 			site.Run(stopC, conf.Interval)
 		}()
+	}
+
+	// setup eebus
+	if err == nil && eebus.Instance != nil {
+		eebus.Instance.Prepare(valueChan)
 	}
 
 	if err != nil {
