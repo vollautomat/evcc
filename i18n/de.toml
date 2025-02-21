@@ -162,7 +162,7 @@ chargerPower22kw = "22 kW"
 chargerPower22kwHelp = "Verwendet einen Strombereich von 6 bis 32 A."
 chargerPowerCustom = "andere"
 chargerPowerCustomHelp = "Definiere einen eigenen Strombereich."
-chargerTypeLabel = "Ladeleistung"
+chargerTypeLabel = "Ladetyp"
 chargingTitle = "Laden"
 circuitLabel = "Stromkreis"
 circuitUnassigned = "nicht zugewiesen"
@@ -434,6 +434,31 @@ modalUpdateNow = "Jetzt installieren"
 modalUpdateStarted = "Starte die neue Version von evcc ..."
 modalUpdateStatusStart = "Installation gestartet:"
 
+[forecast]
+modalTitle = "Vorhersage"
+
+[forecast.co2]
+average = "Durchschnitt"
+lowestHour = "Sauberste Stunde"
+range = "Bereich"
+
+[forecast.price]
+average = "Durchschnitt"
+lowestHour = "Günstigste Stunde"
+range = "Bereich"
+
+[forecast.solar]
+dayAfterTomorrow = "Übermorgen"
+partly = "teilweise"
+remaining = "verbleibend"
+today = "Heute"
+tomorrow = "Morgen"
+
+[forecast.type]
+co2 = "CO₂"
+price = "Preis"
+solar = "Solar"
+
 [header]
 about = "Über"
 blog = "Blog"
@@ -524,6 +549,7 @@ batteryGridChargeActive = "Netzladen aktiv"
 batteryGridChargeLimit = "Netzladen wenn"
 batteryHold = "Batterie (gesperrt)"
 batteryTooltip = "{energy} von {total} ({soc})"
+forecastTooltip = "Vorhersage: verbleibende PV-Produktion heute"
 gridImport = "Netzbezug"
 homePower = "Verbrauch"
 loadpoints = "Ladepunkt | Ladepunkt | {count} Ladepunkte"

@@ -83,8 +83,15 @@
 							icon="sun"
 							:power="pvProduction"
 							:powerTooltip="pvTooltip"
+							:details="solarForecast"
+							:detailsFmt="forecastFmt"
+							:detailsTooltip="forecastTooltip(solarForecast)"
+							:detailsInactive="solarForecast === 0"
+							:detailsIcon="solarForecast !== undefined ? 'forecast' : undefined"
+							:detailsClickable="solarForecast !== undefined"
 							:powerUnit="powerUnit"
 							data-testid="energyflow-entry-production"
+							@details-clicked="openForecastModal"
 						/>
 						<EnergyflowEntry
 							v-if="batteryConfigured"
@@ -230,7 +237,7 @@ import AnimatedNumber from "../AnimatedNumber.vue";
 import settings from "../../settings";
 import { CO2_TYPE } from "../../units";
 import collector from "../../mixins/collector";
-
+import { energyByDay } from "../../utils/forecast";
 export default {
 	name: "Energyflow",
 	components: {
@@ -268,6 +275,7 @@ export default {
 		bufferSoc: { type: Number },
 		bufferStartSoc: { type: Number },
 		consLimit: { type: Object },
+		forecast: { type: Object, default: () => ({}) },
 	},
 	data: () => {
 		return { detailsOpen: false, detailsCompleteHeight: null, ready: false };
@@ -383,6 +391,11 @@ export default {
 			}
 			return this.fmtPricePerKWh(this.batteryGridChargeLimit, this.currency, true);
 		},
+		solarForecast() {
+			const slots = this.forecast.solar || [];
+			if (slots.length === 0) return undefined;
+			return energyByDay(slots, 0);
+		},
 	},
 	watch: {
 		pvConfigured() {
@@ -420,6 +433,12 @@ export default {
 			}
 			return result;
 		},
+		forecastTooltip(value) {
+			if (value !== null) {
+				return [this.$t("main.energyflow.forecastTooltip")];
+			}
+			return [];
+		},
 		detailsValue(price, co2) {
 			if (this.co2Available) {
 				return co2;
@@ -431,6 +450,12 @@ export default {
 				return this.fmtCo2Short(value);
 			}
 			return this.fmtPricePerKWh(value, this.currency, true);
+		},
+		forecastFmt(value) {
+			if (value === null) {
+				return "";
+			}
+			return `${this.fmtWh(value, POWER_UNIT.KW)}`;
 		},
 		kw: function (watt) {
 			return this.fmtW(watt, this.powerUnit);
@@ -447,6 +472,10 @@ export default {
 			const modal = Modal.getOrCreateInstance(
 				document.getElementById("batterySettingsModal")
 			);
+			modal.show();
+		},
+		openForecastModal() {
+			const modal = Modal.getOrCreateInstance(document.getElementById("forecastModal"));
 			modal.show();
 		},
 		dischargePower(power) {
